@@ -1,0 +1,1120 @@
+{% extends 'kilistaff/staffbase.html' %}
+
+{% block title %}Staff Reservations - Kili Haven Lodge{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="page-header">
+  <h2>Pending Reservations</h2>
+  <div class="header-actions">
+    <select id="statusFilter" class="filter-select">
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="waiting_checkin">Waiting Check-in</option>
+    </select>
+  </div>
+</div>
+
+<div class="reservations-table-container">
+  <div class="table-header">
+    <h3>Pending & Waiting Check-in</h3>
+    <div class="table-actions">
+      <input type="text" id="searchReservations" placeholder="Search reservations..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="reservations-table">
+      <thead>
+        <tr>
+          <th>Booking ID</th>
+          <th>Customer</th>
+          <th>Room Type</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
+          <th>Guests</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="reservationsTableBody">
+        {% for reservation in reservations %}
+        <tr data-status="{{ reservation.status }}" data-reservation-id="{{ reservation.id }}">
+          <td class="booking-id">
+            <strong style="color: #2F1B14; font-family: 'Courier New', monospace; letter-spacing: 1px;">{{ reservation.booking_id }}</strong>
+          </td>
+          <td class="customer-name">
+            <strong>{{ reservation.customer.full_name }}</strong>
+          </td>
+          <td>
+            <div class="room-info">
+              <strong>{{ reservation.room_type.name }}</strong>
+              <small>TZS {{ reservation.room_type.price_per_day|floatformat:0 }}/day</small>
+            </div>
+          </td>
+          <td class="date">{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td class="date">{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td class="guests">{{ reservation.number_of_guests }}</td>
+          <td class="amount">TZS <span class="price-amount">{{ reservation.total_amount|floatformat:0 }}</span></td>
+          <td>
+            <span class="status status-{{ reservation.status }}">
+              {{ reservation.get_status_display }}
+            </span>
+          </td>
+          <td class="created">{{ reservation.created_at|date:"M d, Y" }}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-view" onclick="viewReservation({{ reservation.id }})" title="View Details">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+            {% if reservation.status == 'pending' %}
+            <button class="btn btn-sm btn-confirm" onclick="confirmReservation({{ reservation.id }})" title="Confirm">
+              <i class="fa-solid fa-check"></i>
+            </button>
+            <button class="btn btn-sm btn-cancel" onclick="cancelReservation({{ reservation.id }})" title="Cancel">
+              <i class="fa-solid fa-times"></i>
+            </button>
+            {% elif reservation.status == 'waiting_checkin' %}
+            <button class="btn btn-sm btn-cancel" onclick="cancelReservation({{ reservation.id }})" title="Cancel & Delete All Data">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+            {% elif reservation.status == 'checked_in' %}
+            <button class="btn btn-sm btn-checkout" onclick="checkoutReservation({{ reservation.id }})" title="Check-out">
+              <i class="fa-solid fa-sign-out-alt"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-calendar-check"></i>
+              <p>No reservations found. Bookings will appear here when customers make reservations.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Completed Reservations Table -->
+<div class="completed-reservations-container">
+  <div class="table-header">
+    <h3>Completed Reservations (Checked-out)</h3>
+    <div class="table-actions">
+      <select id="completedMonthFilter" class="filter-select">
+        <option value="">All Months</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+      <input type="text" id="searchCompleted" placeholder="Search completed reservations..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="completed-reservations-table">
+      <thead>
+        <tr>
+          <th>Booking ID</th>
+          <th>Customer</th>
+          <th>Room Type</th>
+          <th>Room</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
+          <th>Guests</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody id="completedReservationsTableBody">
+        {% for reservation in completed_reservations %}
+        <tr data-month="{{ reservation.check_out_date|date:'m' }}">
+          <td class="booking-id">
+            <strong style="color: #2F1B14; font-family: 'Courier New', monospace; letter-spacing: 1px;">{{ reservation.booking_id }}</strong>
+          </td>
+          <td class="customer-name">
+            <strong>{{ reservation.customer.full_name }}</strong>
+          </td>
+          <td>
+            <div class="room-info">
+              <strong>{{ reservation.room_type.name }}</strong>
+              <small>TZS {{ reservation.room_type.price_per_day|floatformat:0 }}/day</small>
+            </div>
+          </td>
+          <td class="room-name">{{ reservation.room.room_name|default:"Not Assigned" }}</td>
+          <td class="date">{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td class="date">{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td class="guests">{{ reservation.number_of_guests }}</td>
+          <td class="amount">TZS <span class="price-amount">{{ reservation.total_amount|floatformat:0 }}</span></td>
+          <td>
+            <span class="status status-checked_out">
+              {{ reservation.get_status_display }}
+            </span>
+          </td>
+          <td class="created">{{ reservation.check_out_date|date:"M d, Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-check-circle"></i>
+              <p>No completed reservations found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Reservation Details Modal -->
+<div id="reservationModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Reservation Details</h3>
+      <span class="close" onclick="closeReservationModal()">&times;</span>
+    </div>
+    <div id="reservationDetails" class="modal-body">
+      <!-- Reservation details will be loaded here -->
+    </div>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.page-header h2 {
+  color: #2F1B14;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-view {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-view:hover {
+  background: #138496;
+}
+
+.btn-confirm {
+  background: #28a745;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background: #218838;
+}
+
+.btn-cancel {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background: #c82333;
+}
+
+.btn-checkin {
+  background: #ffc107;
+  color: #212529;
+}
+
+.btn-checkin:hover {
+  background: #e0a800;
+}
+
+.btn-checkout {
+  background: #6f42c1;
+  color: white;
+}
+
+.btn-checkout:hover {
+  background: #5a32a3;
+}
+
+.reservations-table-container,
+.completed-reservations-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.table-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 250px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.reservations-table,
+.completed-reservations-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reservations-table th,
+.completed-reservations-table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #2F1B14;
+  border-bottom: 2px solid #eee;
+}
+
+.reservations-table td,
+.completed-reservations-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.customer-name {
+  font-weight: 600;
+  color: #2F1B14;
+}
+
+.room-info strong {
+  display: block;
+  color: #2F1B14;
+  margin-bottom: 4px;
+}
+
+.room-info small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.booking-id {
+  text-align: center;
+  font-weight: 600;
+}
+
+.date, .guests, .created, .room-name {
+  text-align: center;
+  font-weight: 500;
+}
+
+.amount {
+  font-weight: 600;
+  color: #28a745;
+  text-align: right;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-confirmed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-waiting_checkin {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.status-checked_in {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-checked_out {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-data-content {
+  color: #6c757d;
+}
+
+.no-data-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 2000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: white;
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #000;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10% auto;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .step-indicator {
+    padding: 0 10px;
+  }
+  
+  .step-line {
+    width: 40px;
+  }
+}
+</style>
+
+<script>
+// Configure SweetAlert2 global settings
+Swal.mixin({
+  customClass: {
+    popup: 'swal-high-z-index'
+  },
+  zIndex: 99999
+});
+
+// Search functionality
+document.getElementById('searchReservations').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const tableRows = document.querySelectorAll('#reservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Status filter functionality
+document.getElementById('statusFilter').addEventListener('change', function() {
+  const selectedStatus = this.value;
+  const tableRows = document.querySelectorAll('#reservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    if (selectedStatus === '' || row.dataset.status === selectedStatus) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Search functionality for completed reservations
+document.getElementById('searchCompleted').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const tableRows = document.querySelectorAll('#completedReservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Month filter functionality for completed reservations
+document.getElementById('completedMonthFilter').addEventListener('change', function() {
+  const selectedMonth = this.value;
+  const tableRows = document.querySelectorAll('#completedReservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    if (selectedMonth === '' || row.dataset.month === selectedMonth) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  // Auto-search when month is selected
+  if (selectedMonth !== '') {
+    const monthNames = {
+      '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+      '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+      '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+    };
+    
+    const monthName = monthNames[selectedMonth];
+    const searchInput = document.getElementById('searchCompleted');
+    if (searchInput) {
+      searchInput.value = monthName;
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  } else {
+    // Clear search when "All Months" is selected
+    const searchInput = document.getElementById('searchCompleted');
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  }
+});
+
+// View reservation details
+function viewReservation(reservationId) {
+  // Show loading
+  Swal.fire({
+    title: 'Loading...',
+    text: 'Fetching reservation details',
+    allowOutsideClick: false,
+    showConfirmButton: false,
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  // Fetch reservation details from API
+  fetch(`/staff/reservations/${reservationId}/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const reservation = data.reservation;
+        
+        // Format amount with commas
+        const formattedAmount = parseFloat(reservation.total_amount).toLocaleString('en-US');
+        
+        // Create detailed modal content
+        const modalContent = `
+          <div style="text-align: left; font-family: system-ui, -apple-system, sans-serif; max-height: 70vh; overflow-y: auto;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">📋 Booking Information</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Booking ID:</strong> <span style="font-family: 'Courier New', monospace; background: #e9ecef; padding: 4px 8px; border-radius: 6px; font-size: 16px;">${reservation.booking_id}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Status:</strong> <span style="color: ${reservation.status === 'pending' ? '#856404' : reservation.status === 'confirmed' ? '#155724' : '#721c24'}; font-weight: 600; font-size: 16px;">${reservation.status_display}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Check-in:</strong> <span style="font-size: 16px;">${reservation.check_in_date}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Check-out:</strong> <span style="font-size: 16px;">${reservation.check_out_date}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Guests:</strong> <span style="font-size: 16px;">${reservation.number_of_guests}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Duration:</strong> <span style="font-size: 16px;">${reservation.duration_days} days</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Total Amount:</strong> <span style="color: #28a745; font-weight: 600; font-size: 18px;">TZS ${formattedAmount}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0;"><strong style="font-size: 16px;">Created:</strong> <span style="font-size: 16px;">${reservation.created_at}</span></div>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">👤 Customer Details</h3>
+              <div style="display: flex; gap: 30px;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Full Name:</strong> <span style="font-size: 16px;">${reservation.customer.full_name}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Email:</strong> <a href="mailto:${reservation.customer.email}" style="color: #007bff; text-decoration: none; font-size: 16px;">${reservation.customer.email}</a></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Phone:</strong> <a href="tel:${reservation.customer.phone_number}" style="color: #007bff; text-decoration: none; font-size: 16px;">${reservation.customer.phone_number}</a></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Nationality:</strong> <span style="font-size: 16px;">${reservation.customer.nationality}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">ID Type:</strong> <span style="font-size: 16px;">${reservation.customer.id_type}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">ID Number:</strong> <span style="font-size: 16px;">${reservation.customer.id_passport_number}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Origin:</strong> <span style="font-size: 16px;">${reservation.customer.guest_origin}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0;"><strong style="font-size: 16px;">Guest Type:</strong> <span style="font-size: 16px;">${reservation.customer.is_regular_guest ? 'Regular Guest' : 'New Guest'} (${reservation.customer.total_reservations} bookings)</span></div>
+                </div>
+                
+                <!-- ID Card Image Box -->
+                <div style="flex: 0 0 350px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <h4 style="margin: 0 0 20px; color: #2F1B14; font-size: 20px; text-align: center; font-weight: 700;">🆔 ID Document</h4>
+                  <div style="width: 320px; height: 200px; border: 3px solid #ddd; border-radius: 15px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    ${reservation.customer.id_passport_photo ? 
+                      `<img src="${reservation.customer.id_passport_photo}" alt="ID Document" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; cursor: pointer;" onclick="openImageModal('${reservation.customer.id_passport_photo}')" title="Click to view full size">` :
+                      `<div style="text-align: center; color: #6c757d; font-size: 16px;">
+                        <i class="fa-solid fa-image" style="font-size: 48px; margin-bottom: 12px; opacity: 0.5;"></i><br>
+                        No ID image uploaded
+                      </div>`
+                    }
+                  </div>
+                  <small style="color: #6c757d; font-size: 14px; margin-top: 12px; text-align: center; font-weight: 600;">${reservation.customer.id_type.replace('_', ' ').toUpperCase()}</small>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">🏨 Room Information</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Room Type:</strong> <span style="font-size: 16px;">${reservation.room_type.name}</span></div>
+                ${reservation.room ? `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Assigned Room:</strong> <span style="color: #28a745; font-weight: 600; font-size: 16px;">${reservation.room.room_name}</span></div>` : ''}
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Price per Day:</strong> <span style="font-size: 16px;">TZS ${parseFloat(reservation.room_type.price_per_day).toLocaleString('en-US')}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Total Rooms:</strong> <span style="font-size: 16px;">${reservation.room_type.total_rooms}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Available Rooms:</strong> <span style="color: #28a745; font-weight: 600; font-size: 16px;">${reservation.room_type.available_rooms}</span></div>
+                <div style="padding: 8px 0;"><strong style="font-size: 16px;">Description:</strong> <span style="font-size: 16px;">${reservation.room_type.description || 'No description available'}</span></div>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">📝 Additional Information</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Special Requests:</strong> <span style="font-size: 16px;">${reservation.special_requests}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Purpose of Visit:</strong> <span style="font-size: 16px;">${reservation.purpose_of_visit}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0;"><strong style="font-size: 16px;">Notes:</strong> <span style="font-size: 16px;">No additional notes</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        Swal.fire({
+          title: 'Reservation Details',
+          html: modalContent,
+          width: '95vw',
+          maxWidth: '95vw',
+          showConfirmButton: true,
+          confirmButtonText: 'Close',
+          confirmButtonColor: '#2F1B14',
+          customClass: {
+            popup: 'swal-high-z-index'
+          },
+          zIndex: 99999
+        });
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: data.message || 'Failed to load reservation details',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'swal-high-z-index'
+          },
+          zIndex: 99999
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching reservation details:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to load reservation details. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999
+      });
+    });
+}
+
+// Helper function to calculate days between dates
+function calculateDays(checkIn, checkOut) {
+  const checkInDate = new Date(checkIn);
+  const checkOutDate = new Date(checkOut);
+  const diffTime = Math.abs(checkOutDate - checkInDate);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+}
+
+    // Confirm reservation
+    function confirmReservation(reservationId) {
+      // First, fetch available rooms for this reservation
+      Swal.fire({
+        title: 'Loading...',
+        text: 'Fetching available rooms',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      fetch(`/staff/reservations/${reservationId}/rooms/`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            if (data.available_rooms.length === 0) {
+              Swal.fire({
+                title: 'No Rooms Available',
+                text: `No rooms are available for ${data.room_type} during the selected dates.`,
+                icon: 'warning',
+                confirmButtonText: 'OK',
+                customClass: {
+                  popup: 'swal-high-z-index'
+                },
+                zIndex: 99999
+              });
+              return;
+            }
+
+            // Create room selection options
+            const roomOptions = data.available_rooms.map(room => 
+              `<option value="${room.id}">${room.display_name}</option>`
+            ).join('');
+
+            Swal.fire({
+              title: 'Confirm Reservation',
+              html: `
+                <div style="text-align: left; margin: 20px 0;">
+                  <p style="margin-bottom: 15px; font-weight: 600; color: #2F1B14;">Select a room for this reservation:</p>
+                  <div style="margin-bottom: 10px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Room Type: <span style="color: #28a745;">${data.room_type}</span></label>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Available Rooms: <span style="color: #28a745;">${data.available_rooms.length} of ${data.total_rooms}</span></label>
+                  </div>
+                  <select id="roomSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+                    <option value="">Select a room...</option>
+                    ${roomOptions}
+                  </select>
+                </div>
+              `,
+              showCancelButton: true,
+              confirmButtonColor: '#28a745',
+              cancelButtonColor: '#6c757d',
+              confirmButtonText: 'Confirm & Assign Room',
+              cancelButtonText: 'Cancel',
+              customClass: {
+                popup: 'swal-high-z-index'
+              },
+              zIndex: 99999,
+              preConfirm: () => {
+                const roomSelect = document.getElementById('roomSelect');
+                const selectedRoomId = roomSelect.value;
+                
+                if (!selectedRoomId) {
+                  Swal.showValidationMessage('Please select a room');
+                  return false;
+                }
+                
+                return selectedRoomId;
+              }
+            }).then((result) => {
+              if (result.isConfirmed) {
+                const roomId = result.value;
+                
+                // Show loading
+                Swal.fire({
+                  title: 'Confirming...',
+                  text: 'Assigning room and confirming reservation',
+                  allowOutsideClick: false,
+                  showConfirmButton: false,
+                  customClass: {
+                    popup: 'swal-high-z-index'
+                  },
+                  zIndex: 99999,
+                  didOpen: () => {
+                    Swal.showLoading();
+                  }
+                });
+
+                // Make AJAX call to confirm reservation with room assignment
+                fetch(`/staff/reservations/${reservationId}/confirm/`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                  },
+                  body: JSON.stringify({
+                    room_id: roomId
+                  })
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.status === 'success') {
+                    Swal.fire({
+                      title: 'Reservation Confirmed!',
+                      text: data.message,
+                      icon: 'success',
+                      timer: 3000,
+                      timerProgressBar: true,
+                      showConfirmButton: false,
+                      customClass: {
+                        popup: 'swal-high-z-index'
+                      },
+                      zIndex: 99999
+                    }).then(() => {
+                      location.reload();
+                    });
+                  } else {
+                    Swal.fire({
+                      title: 'Error',
+                      text: data.message || 'Failed to confirm reservation',
+                      icon: 'error',
+                      confirmButtonText: 'OK',
+                      customClass: {
+                        popup: 'swal-high-z-index'
+                      },
+                      zIndex: 99999
+                    });
+                  }
+                })
+                .catch(error => {
+                  console.error('Error confirming reservation:', error);
+                  Swal.fire({
+                    title: 'Error',
+                    text: 'Failed to confirm reservation. Please try again.',
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                      popup: 'swal-high-z-index'
+                    },
+                    zIndex: 99999
+                  });
+                });
+              }
+            });
+          } else {
+            Swal.fire({
+              title: 'Error',
+              text: data.message || 'Failed to load available rooms',
+              icon: 'error',
+              confirmButtonText: 'OK',
+              customClass: {
+                popup: 'swal-high-z-index'
+              },
+              zIndex: 99999
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching available rooms:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Failed to load available rooms. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            customClass: {
+              popup: 'swal-high-z-index'
+            },
+            zIndex: 99999
+          });
+        });
+    }
+
+// Open image modal for full-size viewing
+function openImageModal(imageSrc) {
+  Swal.fire({
+    title: 'ID Document',
+    html: `
+      <div style="text-align: center;">
+        <img src="${imageSrc}" alt="ID Document" style="max-width: 100%; max-height: 70vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      </div>
+    `,
+    width: 'auto',
+    showConfirmButton: true,
+    confirmButtonText: 'Close',
+    confirmButtonColor: '#2F1B14',
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999
+        });
+    }
+
+// Cancel reservation
+function cancelReservation(reservationId) {
+  Swal.fire({
+    title: 'Cancel Reservation?',
+    text: 'Are you sure you want to cancel this reservation and DELETE ALL CUSTOMER DATA? This action cannot be undone!',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, cancel & delete all data!',
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Show loading
+      Swal.fire({
+        title: 'Cancelling...',
+        text: 'Deleting reservation and customer data',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Make AJAX call to cancel reservation
+      fetch(`/staff/reservations/${reservationId}/cancel/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          Swal.fire({
+            title: 'Cancelled!',
+            text: data.message,
+            icon: 'success',
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            customClass: {
+              popup: 'swal-high-z-index'
+            },
+            zIndex: 99999
+          }).then(() => {
+            location.reload();
+          });
+        } else {
+          Swal.fire({
+            title: 'Error',
+            text: data.message || 'Failed to cancel reservation',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            customClass: {
+              popup: 'swal-high-z-index'
+            },
+            zIndex: 99999
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error cancelling reservation:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to cancel reservation. Please try again.',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'swal-high-z-index'
+          },
+          zIndex: 99999
+        });
+      });
+    }
+  });
+}
+
+
+// Check-out reservation
+function checkoutReservation(reservationId) {
+  Swal.fire({
+    title: 'Check-out Guest?',
+    text: 'Are you ready to check-out this guest?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#6f42c1',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, check-out!',
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Here you would make an AJAX call to process check-out
+      Swal.fire({
+        title: 'Checked-out!',
+        text: 'Guest has been checked-out successfully.',
+        icon: 'success',
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999
+      }).then(() => {
+        location.reload();
+      });
+    }
+  });
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const modal = document.getElementById('reservationModal');
+  if (event.target == modal) {
+    closeReservationModal();
+  }
+}
+
+function closeReservationModal() {
+  document.getElementById('reservationModal').style.display = 'none';
+}
+
+// Format numbers with commas
+function formatNumberWithCommas(number) {
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// Apply number formatting on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Format all price amounts
+  const priceAmounts = document.querySelectorAll('.price-amount');
+  priceAmounts.forEach(element => {
+    const number = parseFloat(element.textContent);
+    if (!isNaN(number)) {
+      element.textContent = formatNumberWithCommas(number);
+    }
+  });
+});
+
+
+// Navigation functionality - now handled by href links
+// Active state will be managed by Django template logic
+</script>
+{% endblock %}

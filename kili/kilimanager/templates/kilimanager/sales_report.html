@@ -1,0 +1,483 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Report - Kili Haven Lodge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.5;
+            color: #2c3e50;
+            background: white;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .report-container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .report-header {
+            background: white;
+            color: #2c3e50;
+            padding: 25px;
+            text-align: center;
+            border-bottom: 2px solid #e1e8ed;
+        }
+        
+        .logo {
+            height: 80px;
+            margin-bottom: 15px;
+        }
+        
+        .report-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #2c3e50;
+        }
+        
+        .report-subtitle {
+            font-size: 20px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+        
+        .report-period {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 500;
+        }
+        
+        .report-date {
+            font-size: 14px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        /* Content */
+        .report-content {
+            padding: 25px;
+        }
+        
+        .summary-section {
+            margin-bottom: 25px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .summary-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .summary-card h4 {
+            color: #3498db;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .summary-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        /* Tables */
+        .table-container {
+            margin-bottom: 25px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            border: 1px solid #e1e8ed;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .data-table thead {
+            background: #2c3e50;
+            color: white;
+        }
+        
+        .data-table th {
+            padding: 12px 10px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-right: 1px solid #34495e;
+        }
+        
+        .data-table th:last-child {
+            border-right: none;
+        }
+        
+        .data-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e1e8ed;
+            border-right: 1px solid #f1f3f5;
+            font-size: 13px;
+            vertical-align: top;
+        }
+        
+        .data-table td:last-child {
+            border-right: none;
+        }
+        
+        .data-table .text-center {
+            text-align: center;
+        }
+        
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-checked-in {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-checked-out {
+            background: #cce5ff;
+            color: #004085;
+        }
+        
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Footer */
+        .report-footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .report-footer p {
+            color: #6c757d;
+            font-size: 12px;
+            margin: 0;
+        }
+        
+        /* No data state */
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        
+        .no-data i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+        
+        .no-data h4 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .report-container {
+                box-shadow: none;
+                border: none;
+                border-radius: 0;
+            }
+            
+            .report-header {
+                background: white !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+                page-break-inside: avoid;
+            }
+            
+            .data-table thead {
+                background: #2c3e50 !important;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+            }
+            
+            .summary-cards {
+                page-break-inside: avoid;
+            }
+            
+            .table-container {
+                page-break-inside: avoid;
+            }
+            
+            .data-table {
+                page-break-inside: auto;
+            }
+            
+            .data-table tbody tr {
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* PDF-specific styles for landscape orientation */
+        @page {
+            size: A4 landscape;
+            margin: 0.5in;
+        }
+        
+        /* Optimize for landscape PDF */
+        .report-container {
+            width: 100%;
+            max-width: none;
+        }
+        
+        .data-table {
+            font-size: 11px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 6px 4px;
+            white-space: nowrap;
+        }
+        
+        .summary-cards {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .summary-card {
+            padding: 10px;
+        }
+        
+        .summary-card h4 {
+            font-size: 10px;
+        }
+        
+        .summary-card .value {
+            font-size: 16px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+        }
+        
+        .report-content {
+            padding: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <!-- Header -->
+        <div class="report-header">
+            <img src="{% static 'images/logo-kili.png' %}" alt="Kili Haven Lodge" class="logo">
+            <h1 class="report-title">Kili Haven Lodge</h1>
+            <h2 class="report-subtitle">Sales Report</h2>
+            <p class="report-period">{{ month_name }} {{ year }}</p>
+            <p class="report-date">Generated on: {{ generated_date }}</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="report-content">
+            <!-- Summary Section -->
+            <div class="summary-section">
+                <h3 class="section-title">Sales Summary</h3>
+                <div class="summary-cards">
+                    <div class="summary-card primary">
+                        <h4>Monthly Sales</h4>
+                        <div class="value">TZS {{ monthly_sales }}</div>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Yearly Sales</h4>
+                        <div class="value">TZS {{ yearly_sales }}</div>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Total Bookings</h4>
+                        <div class="value">{{ total_bookings }}</div>
+                    </div>
+                    <div class="summary-card">
+                        <h4>Room Types</h4>
+                        <div class="value">{{ room_types_count }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Room Type Performance -->
+            <div class="table-container">
+                <h3 class="section-title">Room Type Performance</h3>
+                {% if room_type_profits %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Room Type</th>
+                            <th class="text-right">Price per Day</th>
+                            <th class="text-center">Bookings</th>
+                            <th class="text-right">Total Revenue</th>
+                            <th class="text-center">Performance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for profit in room_type_profits %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ profit.room_type_name }}</strong>
+                                <br>
+                                <small style="color: #6c757d;">{{ profit.room_type_description|truncatechars:50 }}</small>
+                            </td>
+                            <td class="text-right currency">TZS {{ profit.price_per_day }}</td>
+                            <td class="text-center">
+                                <span style="background: #e7f3ff; color: #0066cc; padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 12px;">
+                                    {{ profit.booking_count }}
+                                </span>
+                            </td>
+                            <td class="text-right currency">TZS {{ profit.total_revenue }}</td>
+                            <td class="text-center">
+                                {% if profit.booking_count >= 5 %}
+                                    <span class="performance-badge performance-excellent">Excellent</span>
+                                {% elif profit.booking_count >= 3 %}
+                                    <span class="performance-badge performance-good">Good</span>
+                                {% elif profit.booking_count >= 1 %}
+                                    <span class="performance-badge performance-average">Average</span>
+                                {% else %}
+                                    <span class="performance-badge performance-poor">Poor</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <h4>No Sales Data Available</h4>
+                    <p>There are no sales records for the selected period.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Customer Payments -->
+            <div class="table-container">
+                <h3 class="section-title">Customer Payments</h3>
+                {% if customer_payments %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>S/N</th>
+                            <th>Customer Name</th>
+                            <th>Phone</th>
+                            <th>Room Type</th>
+                            <th>Payment Date</th>
+                            <th class="text-center">Duration</th>
+                            <th class="text-right">Amount Paid</th>
+                            <th class="text-center">Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in customer_payments %}
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td><strong>{{ payment.customer_name }}</strong></td>
+                            <td>{{ payment.phone_number }}</td>
+                            <td>{{ payment.room_type }}</td>
+                            <td><strong>{{ payment.payment_date }}</strong></td>
+                            <td class="text-center">
+                                <span style="background: #e7f3ff; color:rgb(0, 31, 63); padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 12px;">
+                                    {{ payment.duration }} days
+                                </span>
+                            </td>
+                            <td class="text-right currency">TZS {{ payment.amount_paid }}</td>
+                            <td class="text-center">
+                                <span class="status-badge status-{{ payment.payment_status|lower|cut:' ' }}">
+                                    {{ payment.payment_status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="no-data">
+                    <i class="fa-solid fa-credit-card"></i>
+                    <h4>No Payment Data Available</h4>
+                    <p>There are no payment records for the selected period.</p>
+                </div>
+                {% endif %}
+            </div>
+           
+        </div>
+        
+        <!-- Footer -->
+        <div class="report-footer">
+            <p>This report was generated automatically by Kili Haven Lodge Management System</p>
+        </div>
+    </div>
+</body>
+</html>

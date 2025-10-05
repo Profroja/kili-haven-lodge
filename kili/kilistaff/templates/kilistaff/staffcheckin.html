@@ -1,0 +1,1755 @@
+{% extends 'kilistaff/staffbase.html' %}
+{% load static %}
+
+{% block title %}Staff Check-in/Check-out - Kili Haven Lodge{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="page-header">
+  <h2>Check-in Management</h2>
+  <div class="header-actions">
+    <div class="reservation-lookup">
+      <input type="text" id="reservationIdInput" placeholder="Enter Booking ID (e.g., ABC123)" class="reservation-input">
+      <button class="btn btn-secondary" onclick="loadReservationDetails()">
+        <i class="fa-solid fa-search"></i> Load Reservation
+      </button>
+    </div>
+    <button class="btn btn-primary" onclick="openCheckinModal()">
+      <i class="fa-solid fa-plus"></i> Create Check-in
+    </button>
+  </div>
+</div>
+
+<!-- Check-in Results Table -->
+<div class="checkin-results-container" id="checkinResults">
+  <div class="table-header">
+    <h3>All Checked-in Guests</h3>
+    <div class="table-actions">
+      <input type="text" id="searchCheckins" placeholder="Search check-ins..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="checkin-table">
+      <thead>
+        <tr>
+          <th>S/N</th>
+          <th>Booking ID</th>
+          <th>Customer Name</th>
+          <th>Room Type</th>
+          <th>Room</th>
+          <th>Check-in Date</th>
+          <th>Check-out Date</th>
+          <th>Payment Status</th>
+          <th>Total Amount</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="checkinTableBody">
+        {% for reservation in checked_in_reservations %}
+        <tr>
+          <td class="serial-number">{{ forloop.counter }}</td>
+          <td><strong>{{ reservation.booking_id }}</strong></td>
+          <td>{{ reservation.customer.full_name }}</td>
+          <td>{{ reservation.room_type.name }}</td>
+          <td>{{ reservation.room.room_name|default:"Not Assigned" }}</td>
+          <td>{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td>{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td><span class="payment-status {{ reservation.payment_status }}">{{ reservation.get_payment_status_display }}</span></td>
+          <td class="total-amount">TZS <span class="amount-value">{{ reservation.total_amount|floatformat:0 }}</span></td>
+          <td class="actions">
+            <button class="btn btn-sm btn-view" onclick="viewReservation('{{ reservation.booking_id }}')" title="View Details">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-checkout" onclick="checkoutReservation('{{ reservation.booking_id }}')" title="Check-out">
+              <i class="fa-solid fa-sign-out-alt"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-bed"></i>
+              <p>No checked-in guests found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Checked-out Guests Table -->
+<div class="checkout-results-container" id="checkoutResults">
+  <div class="table-header">
+    <h3>Checked-out Guests</h3>
+    <div class="table-actions">
+      <select id="monthFilter" class="filter-select">
+        <option value="">All Months</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+      <input type="text" id="searchCheckouts" placeholder="Search check-outs..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="checkout-table">
+      <thead>
+        <tr>
+          <th>S/N</th>
+          <th>Booking ID</th>
+          <th>Customer Name</th>
+          <th>Room Type</th>
+          <th>Room</th>
+          <th>Check-in Date</th>
+          <th>Check-out Date</th>
+          <th>Payment Status</th>
+          <th>Total Amount</th>
+        </tr>
+      </thead>
+      <tbody id="checkoutTableBody">
+        {% for reservation in checked_out_reservations %}
+        <tr data-month="{{ reservation.check_out_date|date:'m' }}">
+          <td class="serial-number">{{ forloop.counter }}</td>
+          <td><strong>{{ reservation.booking_id }}</strong></td>
+          <td>{{ reservation.customer.full_name }}</td>
+          <td>{{ reservation.room_type.name }}</td>
+          <td>{{ reservation.room.room_name|default:"Not Assigned" }}</td>
+          <td>{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td>{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td><span class="payment-status {{ reservation.payment_status }}">{{ reservation.get_payment_status_display }}</span></td>
+          <td class="total-amount">TZS <span class="amount-value">{{ reservation.total_amount|floatformat:0 }}</span></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-check-circle"></i>
+              <p>No checked-out guests found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.page-header h2 {
+  color: #2F1B14;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.reservation-lookup {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.reservation-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+  text-transform: uppercase;
+}
+
+.reservation-input:focus {
+  outline: none;
+  border-color: #2F1B14;
+  box-shadow: 0 0 0 2px rgba(47, 27, 20, 0.25);
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #2F1B14;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #4A2C2A;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Check-in Results Table */
+.checkin-results-container,
+.checkout-results-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.table-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.search-input,
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 250px;
+  background: white;
+  font-size: 14px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.checkin-table,
+.checkout-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.checkin-table th,
+.checkout-table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #2F1B14;
+  border-bottom: 2px solid #eee;
+}
+
+.checkin-table td,
+.checkout-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.serial-number {
+  text-align: center;
+  font-weight: 600;
+  color: #2F1B14;
+  width: 60px;
+}
+
+.payment-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.payment-status.paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.payment-status.not_paid {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.payment-status.partial {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.total-amount {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-view {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-view:hover {
+  background: #138496;
+}
+
+.btn-checkout {
+  background: #6f42c1;
+  color: white;
+}
+
+.btn-checkout:hover {
+  background: #5a32a3;
+}
+
+/* SweetAlert2 High Z-Index */
+.swal-high-z-index {
+  z-index: 99999 !important;
+}
+
+.swal2-backdrop {
+  z-index: 99998 !important;
+}
+
+.swal2-container {
+  z-index: 99999 !important;
+}
+
+.swal2-popup {
+  z-index: 99999 !important;
+}
+
+/* Step-wise Modal Styles */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  margin: 0 10px;
+}
+
+.step-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e9ecef;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.step.active .step-number {
+  background: #2F1B14;
+  color: white;
+}
+
+.step.completed .step-number {
+  background: #28a745;
+  color: white;
+}
+
+.step-line {
+  width: 50px;
+  height: 2px;
+  background: #e9ecef;
+  margin: 0 10px;
+}
+
+.step.completed + .step .step-line {
+  background: #28a745;
+}
+
+.modal-step {
+  display: none;
+}
+
+.modal-step.active {
+  display: block;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #2F1B14;
+  font-size: 13px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #2F1B14;
+}
+
+.form-group small {
+  margin-top: 5px;
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+/* Total Amount Display */
+.total-amount-display {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.amount-card h4 {
+  margin: 0 0 15px 0;
+  color: #2F1B14;
+  font-size: 16px;
+  text-align: center;
+}
+
+.amount-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.amount-row.total-row {
+  border-top: 2px solid #2F1B14;
+  padding-top: 10px;
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.total-amount-value {
+  color: #28a745;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-data-content {
+  color: #6c757d;
+}
+
+.no-data-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .reservation-lookup {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .reservation-input {
+    width: 100%;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+</style>
+
+<script>
+// Configure SweetAlert2 global settings
+Swal.mixin({
+  customClass: {
+    popup: 'swal-high-z-index'
+  }
+});
+
+let currentStep = 1;
+let checkinData = {};
+
+// Load reservation details by booking ID
+function loadReservationDetails() {
+  const bookingId = document.getElementById('reservationIdInput').value.trim().toUpperCase();
+  
+  if (!bookingId) {
+    Swal.fire({
+      title: 'Error',
+      text: 'Please enter a booking ID',
+      icon: 'error',
+      confirmButtonText: 'OK',
+      customClass: {
+        popup: 'swal-high-z-index'
+      }
+    });
+    return;
+  }
+  
+  // Show loading
+  Swal.fire({
+    title: 'Loading...',
+    text: 'Fetching reservation details',
+    allowOutsideClick: false,
+    showConfirmButton: false,
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  // Fetch reservation details by booking ID
+  fetch(`/staff/reservations/by-booking-id/${bookingId}/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const reservation = data.reservation;
+        
+        // Check if reservation is in waiting_checkin status
+        if (reservation.status !== 'waiting_checkin') {
+          Swal.fire({
+            title: 'Invalid Status',
+            text: `This reservation is ${reservation.status_display}. Only "Waiting Check-in" reservations can be checked in.`,
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            customClass: {
+              popup: 'swal-high-z-index'
+            }
+          });
+          return;
+        }
+        
+        // Pre-fill the check-in data with existing reservation details
+        window.checkinData = {
+          email: reservation.customer.email,
+          full_name: reservation.customer.full_name,
+          phone_number: reservation.customer.phone_number,
+          nationality: reservation.customer.nationality,
+          id_type: reservation.customer.id_type,
+          id_passport_number: reservation.customer.id_passport_number,
+          other_id_name: reservation.customer.other_id_name || '',
+          check_in_date: reservation.check_in_date,
+          check_out_date: reservation.check_out_date,
+          room_type: reservation.room_type.id,
+          room_id: reservation.room ? reservation.room.id : '',
+          room_name: reservation.room ? reservation.room.room_name : '',
+          number_of_guests: reservation.number_of_guests,
+          purpose_of_visit: reservation.purpose_of_visit,
+          special_requests: reservation.special_requests || '',
+          payment_status: reservation.payment_status,
+          signature_consent: '', // Will be filled by user
+          existing_reservation_id: reservation.id // Track that this is an existing reservation
+        };
+        
+        // Open the step-wise check-in modal
+        openCheckinModal();
+      } else {
+        Swal.fire({
+          title: 'Reservation Not Found',
+          text: data.message || 'No reservation found with this booking ID',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'swal-high-z-index'
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching reservation details:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to load reservation details. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'swal-high-z-index'
+        }
+      });
+    });
+}
+
+// Open check-in modal
+function openCheckinModal() {
+  currentStep = 1;
+  
+  // If no existing checkinData, initialize empty object for new check-in
+  if (!window.checkinData || Object.keys(window.checkinData).length === 0) {
+    checkinData = {};
+  } else {
+    checkinData = window.checkinData;
+  }
+  
+  const modalTitle = checkinData.existing_reservation_id 
+    ? 'Check-in Guest (Existing Reservation)'
+    : 'Create Check-in';
+  
+  Swal.fire({
+    title: modalTitle,
+    html: getStepHTML(currentStep),
+    width: '600px',
+    showCancelButton: false,
+    showConfirmButton: false,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    backdrop: true,
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    didOpen: () => {
+      initializeStep(currentStep);
+    }
+  });
+}
+
+// Get HTML for each step
+function getStepHTML(step) {
+  switch(step) {
+    case 1:
+      return `
+        <div class="step-indicator">
+          <div class="step active">
+            <div class="step-number">1</div>
+            <span>Customer Info</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <span>Room Selection</span>
+          </div>
+        </div>
+        
+        <div class="modal-step active">
+          <h4 style="margin-bottom: 15px; color: #2F1B14;">Customer Information</h4>
+          ${checkinData.existing_reservation_id ? '<div style="background: #e3f2fd; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #2196f3;"><strong style="color: #1976d2;">📋 Existing Reservation</strong><br><small style="color: #666;">This guest has a confirmed reservation. You can review and update the details below.</small></div>' : ''}
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_email">Email *</label>
+              <input type="email" id="modal_email" name="email" required>
+            </div>
+            <div class="form-group">
+              <label for="modal_full_name">Full Name *</label>
+              <input type="text" id="modal_full_name" name="full_name" required>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_phone_number">Phone *</label>
+              <input type="tel" id="modal_phone_number" name="phone_number" required>
+            </div>
+            <div class="form-group">
+              <label for="modal_nationality">Nationality *</label>
+              <input type="text" id="modal_nationality" name="nationality" required>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_id_type">ID Type *</label>
+              <select id="modal_id_type" name="id_type" required>
+                <option value="">Select ID Type</option>
+                <option value="national_id">National ID</option>
+                <option value="passport">Passport</option>
+                <option value="other">Other ID</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modal_id_passport_number">ID Number *</label>
+              <input type="text" id="modal_id_passport_number" name="id_passport_number" required>
+            </div>
+          </div>
+          
+          <div class="form-group" id="modal_other_id_group" style="display: none;">
+            <label for="modal_other_id_name">Other ID Name</label>
+            <input type="text" id="modal_other_id_name" name="other_id_name" placeholder="Specify ID type">
+          </div>
+          
+          <div class="form-group">
+            <label for="modal_id_passport_photo">ID Photo</label>
+            <input type="file" id="modal_id_passport_photo" name="id_passport_photo" accept="image/*">
+            <small>Upload ID or Passport photo (optional)</small>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="Swal.close()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="nextStep()">Next</button>
+        </div>
+      `;
+      
+    case 2:
+      return `
+        <div class="step-indicator">
+          <div class="step completed">
+            <div class="step-number">✓</div>
+            <span>Customer Info</span>
+          </div>
+          <div class="step-line" style="background: #28a745;"></div>
+          <div class="step active">
+            <div class="step-number">2</div>
+            <span>Room Selection</span>
+          </div>
+        </div>
+        
+        <div class="modal-step active">
+          <h4 style="margin-bottom: 15px; color: #2F1B14;">Room Selection & Check-in Details</h4>
+          ${checkinData.existing_reservation_id && checkinData.room_name ? `<div style="background: #e8f5e8; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #4caf50;"><strong style="color: #2e7d32;">🏨 Assigned Room</strong><br><small style="color: #666;">This guest has been assigned to: <strong>${checkinData.room_name}</strong></small></div>` : ''}
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_check_in_date">Check-in Date *</label>
+              <input type="date" id="modal_check_in_date" name="check_in_date" required>
+            </div>
+            <div class="form-group">
+              <label for="modal_check_out_date">Check-out Date *</label>
+              <input type="date" id="modal_check_out_date" name="check_out_date" required>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_room_type">Room Type *</label>
+              <select id="modal_room_type" name="room_type" required>
+                <option value="">Select Room Type</option>
+                {% for room_type in room_types %}
+                <option value="{{ room_type.id }}" data-price="{{ room_type.price_per_day }}">
+                  {{ room_type.name }} - TZS {{ room_type.price_per_day|floatformat:0 }}/day
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modal_room_id">Room *</label>
+              <select id="modal_room_id" name="room_id" required disabled>
+                <option value="">Select Room Type First</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_number_of_guests">Guests *</label>
+              <select id="modal_number_of_guests" name="number_of_guests" required>
+                <option value="">Select</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modal_payment_status">Payment Status *</label>
+              <select id="modal_payment_status" name="payment_status" required>
+                <option value="not_paid">Not Paid</option>
+                <option value="paid">Paid</option>
+                <option value="partial">Partial Payment</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="modal_purpose_of_visit">Purpose</label>
+              <select id="modal_purpose_of_visit" name="purpose_of_visit">
+                <option value="leisure">Leisure</option>
+                <option value="business">Business</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modal_signature_consent">Signature *</label>
+              <input type="text" id="modal_signature_consent" name="signature_consent" required placeholder="Type your full name">
+            </div>
+          </div>
+          
+          <div class="total-amount-display" id="totalAmountDisplay" style="display: none;">
+            <div class="amount-card">
+              <h4>Total Amount</h4>
+              <div class="amount-details">
+                <div class="amount-row">
+                  <span>Room Price per Day:</span>
+                  <span id="roomPricePerDay">-</span>
+                </div>
+                <div class="amount-row">
+                  <span>Number of Days:</span>
+                  <span id="numberOfDays">-</span>
+                </div>
+                <div class="amount-row total-row">
+                  <span><strong>Total Amount:</strong></span>
+                  <span id="totalAmount" class="total-amount-value">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="prevStep()">Previous</button>
+          <button type="button" class="btn btn-primary" onclick="submitCheckin()">Create Check-in</button>
+        </div>
+      `;
+  }
+}
+
+// Initialize step
+function initializeStep(step) {
+  if (step === 1) {
+    // Handle ID type change
+    const idTypeField = document.getElementById('modal_id_type');
+    if (idTypeField) {
+      idTypeField.addEventListener('change', function() {
+        const otherIdGroup = document.getElementById('modal_other_id_group');
+        if (this.value === 'other') {
+          if (otherIdGroup) {
+            otherIdGroup.style.display = 'block';
+            const otherIdField = document.getElementById('modal_other_id_name');
+            if (otherIdField) otherIdField.required = true;
+          }
+        } else {
+          if (otherIdGroup) {
+            otherIdGroup.style.display = 'none';
+            const otherIdField = document.getElementById('modal_other_id_name');
+            if (otherIdField) {
+              otherIdField.required = false;
+              otherIdField.value = '';
+            }
+          }
+        }
+      });
+    }
+    
+    // Load pre-filled data if available
+    console.log('About to load step data for step:', step);
+    loadStepData(step);
+  }
+  
+  if (step === 2) {
+    // Set minimum date to today for date fields
+    const today = new Date().toISOString().split('T')[0];
+    const checkInField = document.getElementById('modal_check_in_date');
+    const checkOutField = document.getElementById('modal_check_out_date');
+    if (checkInField) checkInField.min = today;
+    if (checkOutField) checkOutField.min = today;
+    
+    // Handle room type change
+    const roomTypeField = document.getElementById('modal_room_type');
+    if (roomTypeField) {
+      roomTypeField.addEventListener('change', function() {
+      const roomSelect = document.getElementById('modal_room_id');
+      const roomTypeId = this.value;
+      
+      if (roomTypeId) {
+        roomSelect.disabled = false;
+        roomSelect.innerHTML = '<option value="">Loading rooms...</option>';
+        
+        // For existing reservations, get all rooms (including the assigned one)
+        const endpoint = checkinData.existing_reservation_id 
+          ? `/staff/rooms/type/${roomTypeId}/all-rooms/`
+          : `/staff/rooms/type/${roomTypeId}/rooms/`;
+        
+        fetch(endpoint)
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              if (data.rooms.length > 0) {
+                roomSelect.innerHTML = '<option value="">Select Room</option>';
+                data.rooms.forEach(room => {
+                  const option = document.createElement('option');
+                  option.value = room.id;
+                  option.textContent = room.room_name;
+                  
+                  // Mark assigned room for existing reservations
+                  if (checkinData.existing_reservation_id && checkinData.room_id == room.id) {
+                    option.textContent += ' (Assigned)';
+                    option.style.fontWeight = 'bold';
+                    option.style.color = '#28a745';
+                  }
+                  
+                  roomSelect.appendChild(option);
+                });
+              } else {
+                roomSelect.innerHTML = '<option value="">No rooms available</option>';
+              }
+            } else {
+              roomSelect.innerHTML = '<option value="">Error loading rooms</option>';
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            roomSelect.innerHTML = '<option value="">Error loading rooms</option>';
+          });
+      } else {
+        roomSelect.disabled = true;
+        roomSelect.innerHTML = '<option value="">Select Room Type First</option>';
+      }
+      
+      // Calculate total amount when room type changes
+      calculateTotalAmount();
+      });
+    }
+    
+    // Handle date changes
+    if (checkInField) {
+      checkInField.addEventListener('change', function() {
+        if (checkOutField) {
+          if (this.value) {
+            checkOutField.min = this.value;
+            if (checkOutField.value && checkOutField.value <= this.value) {
+              checkOutField.value = '';
+            }
+          }
+        }
+        calculateTotalAmount();
+      });
+    }
+    
+    if (checkOutField) {
+      checkOutField.addEventListener('change', function() {
+        calculateTotalAmount();
+      });
+    }
+    
+    // Load pre-filled data if available
+    console.log('About to load step data for step:', step);
+    loadStepData(step);
+  }
+}
+
+// Calculate and display total amount
+function calculateTotalAmount() {
+  const roomTypeSelect = document.getElementById('modal_room_type');
+  const checkInDate = document.getElementById('modal_check_in_date');
+  const checkOutDate = document.getElementById('modal_check_out_date');
+  const totalAmountDisplay = document.getElementById('totalAmountDisplay');
+  
+  if (roomTypeSelect.value && checkInDate.value && checkOutDate.value) {
+    const roomPrice = parseFloat(roomTypeSelect.selectedOptions[0].dataset.price);
+    const checkIn = new Date(checkInDate.value);
+    const checkOut = new Date(checkOutDate.value);
+    
+    // Calculate number of days
+    const timeDiff = checkOut.getTime() - checkIn.getTime();
+    const days = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    if (days > 0) {
+      const totalAmount = roomPrice * days;
+      
+      // Update display
+      document.getElementById('roomPricePerDay').textContent = `TZS ${roomPrice.toLocaleString()}`;
+      document.getElementById('numberOfDays').textContent = `${days} day${days > 1 ? 's' : ''}`;
+      document.getElementById('totalAmount').textContent = `TZS ${totalAmount.toLocaleString()}`;
+      
+      // Show the total amount display
+      totalAmountDisplay.style.display = 'block';
+    } else {
+      // Hide if invalid dates
+      totalAmountDisplay.style.display = 'none';
+    }
+  } else {
+    // Hide if not all required fields are filled
+    totalAmountDisplay.style.display = 'none';
+  }
+}
+
+// Next step
+function nextStep() {
+  if (validateStep(currentStep)) {
+    saveStepData(currentStep);
+    currentStep++;
+    
+    if (currentStep <= 2) {
+      Swal.update({
+        html: getStepHTML(currentStep)
+      });
+      
+      setTimeout(() => {
+        initializeStep(currentStep);
+      }, 100);
+    }
+  }
+}
+
+// Previous step
+function prevStep() {
+  if (currentStep > 1) {
+    currentStep--;
+    Swal.update({
+      html: getStepHTML(currentStep)
+    });
+    
+    setTimeout(() => {
+      initializeStep(currentStep);
+      loadStepData(currentStep);
+    }, 100);
+  }
+}
+
+// Validate step
+function validateStep(step) {
+  if (step === 1) {
+    const requiredFields = ['modal_email', 'modal_full_name', 'modal_phone_number', 'modal_nationality', 'modal_id_type', 'modal_id_passport_number'];
+    for (let field of requiredFields) {
+      const fieldElement = document.getElementById(field);
+      if (fieldElement && !fieldElement.value.trim()) {
+        Swal.showValidationMessage(`${field.replace('modal_', '').replace('_', ' ')} is required`);
+        return false;
+      }
+    }
+  }
+  
+  if (step === 2) {
+    const requiredFields = ['modal_check_in_date', 'modal_check_out_date', 'modal_room_type', 'modal_room_id', 'modal_number_of_guests', 'modal_signature_consent', 'modal_payment_status'];
+    for (let field of requiredFields) {
+      const fieldElement = document.getElementById(field);
+      if (fieldElement && !fieldElement.value.trim()) {
+        Swal.showValidationMessage(`${field.replace('modal_', '').replace('_', ' ')} is required`);
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+// Save step data
+function saveStepData(step) {
+  if (step === 1) {
+    const fields = ['modal_email', 'modal_full_name', 'modal_phone_number', 'modal_nationality', 'modal_id_type', 'modal_other_id_name', 'modal_id_passport_number'];
+    fields.forEach(field => {
+      const element = document.getElementById(field);
+      if (element) {
+        const key = field.replace('modal_', '');
+        checkinData[key] = element.value;
+      }
+    });
+    
+    // Handle file upload
+    const fileInput = document.getElementById('modal_id_passport_photo');
+    if (fileInput && fileInput.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        checkinData.id_passport_photo = e.target.result;
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+  }
+  
+  if (step === 2) {
+    const fields = ['modal_check_in_date', 'modal_check_out_date', 'modal_room_type', 'modal_room_id', 'modal_number_of_guests', 'modal_purpose_of_visit', 'modal_signature_consent', 'modal_payment_status'];
+    fields.forEach(field => {
+      const element = document.getElementById(field);
+      if (element) {
+        const key = field.replace('modal_', '');
+        checkinData[key] = element.value;
+      }
+    });
+    
+    // Get room name
+    const roomSelect = document.getElementById('modal_room_id');
+    if (roomSelect && roomSelect.selectedIndex >= 0) {
+      checkinData.room_name = roomSelect.options[roomSelect.selectedIndex].text;
+    }
+  }
+}
+
+// Load step data
+function loadStepData(step) {
+  console.log('Loading step data for step:', step, 'checkinData:', checkinData);
+  
+  if (step === 1) {
+    const fields = ['modal_email', 'modal_full_name', 'modal_phone_number', 'modal_nationality', 'modal_id_type', 'modal_other_id_name', 'modal_id_passport_number'];
+    fields.forEach(field => {
+      const element = document.getElementById(field);
+      const key = field.replace('modal_', '');
+      if (element && checkinData[key]) {
+        console.log(`Setting ${field} to:`, checkinData[key]);
+        element.value = checkinData[key];
+      }
+    });
+    
+    // Handle other ID group display
+    if (checkinData.id_type === 'other') {
+      const otherIdGroup = document.getElementById('modal_other_id_group');
+      if (otherIdGroup) {
+        otherIdGroup.style.display = 'block';
+        const otherIdField = document.getElementById('modal_other_id_name');
+        if (otherIdField) otherIdField.required = true;
+      }
+    }
+  }
+  
+  if (step === 2) {
+    const fields = ['modal_check_in_date', 'modal_check_out_date', 'modal_room_type', 'modal_room_id', 'modal_number_of_guests', 'modal_purpose_of_visit', 'modal_signature_consent', 'modal_payment_status'];
+    fields.forEach(field => {
+      const element = document.getElementById(field);
+      const key = field.replace('modal_', '');
+      if (element && checkinData[key]) {
+        console.log(`Setting ${field} to:`, checkinData[key]);
+        element.value = checkinData[key];
+      }
+    });
+    
+    // Trigger room type change to load rooms and pre-select the assigned room
+    if (checkinData.room_type) {
+      setTimeout(() => {
+        const roomTypeSelect = document.getElementById('modal_room_type');
+        if (roomTypeSelect) {
+          // Set the room type value first
+          roomTypeSelect.value = checkinData.room_type;
+          
+          // Trigger change event to load rooms
+          roomTypeSelect.dispatchEvent(new Event('change'));
+          
+          // After rooms are loaded, pre-select the assigned room
+          if (checkinData.room_id) {
+            setTimeout(() => {
+              const roomSelect = document.getElementById('modal_room_id');
+              if (roomSelect) {
+                roomSelect.value = checkinData.room_id;
+                // Trigger change event to update any dependent fields
+                roomSelect.dispatchEvent(new Event('change'));
+              }
+            }, 1000); // Wait for rooms to load
+          }
+        }
+      }, 500);
+    }
+  }
+}
+
+// Submit check-in
+function submitCheckin() {
+  // Save step 2 data before submitting
+  if (validateStep(2)) {
+    saveStepData(2);
+  } else {
+    return;
+  }
+  
+  Swal.fire({
+    title: 'Processing Check-in...',
+    text: 'Please wait while we process the check-in',
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    showConfirmButton: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+  });
+  
+  // Determine the endpoint based on whether this is an existing reservation
+  const endpoint = checkinData.existing_reservation_id 
+    ? `/staff/reservations/${checkinData.existing_reservation_id}/checkin/`
+    : '/staff/checkin/process/';
+  
+  fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(checkinData)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.status === 'success') {
+      Swal.fire({
+        title: 'Check-in Successful!',
+        text: 'Guest has been checked in successfully.',
+        icon: 'success',
+        confirmButtonText: 'OK',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        backdrop: true,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+      }).then(() => {
+        // Add to results table
+        addToResultsTable(result.reservation);
+        Swal.close();
+      });
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: result.message,
+        icon: 'error',
+        confirmButtonText: 'OK',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        backdrop: true,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire({
+      title: 'Error!',
+      text: 'An error occurred while processing the check-in.',
+      icon: 'error',
+      confirmButtonText: 'OK',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      backdrop: true,
+      customClass: {
+        popup: 'swal-high-z-index'
+      },
+    });
+  });
+}
+
+// Add to results table
+function addToResultsTable(reservation) {
+  const resultsContainer = document.getElementById('checkinResults');
+  const tableBody = document.getElementById('checkinTableBody');
+  
+  // Show results container (it's already visible now)
+  resultsContainer.style.display = 'block';
+  
+  // Check if there's a "no data" row and remove it
+  const noDataRow = tableBody.querySelector('.no-data');
+  if (noDataRow) {
+    noDataRow.remove();
+  }
+  
+  // Add new row at the top
+  const newRow = document.createElement('tr');
+  newRow.innerHTML = `
+    <td class="serial-number">1</td>
+    <td><strong>${reservation.booking_id}</strong></td>
+    <td>${reservation.customer_name}</td>
+    <td>${reservation.room_type_name || 'N/A'}</td>
+    <td>${reservation.room_name}</td>
+    <td>${reservation.check_in_date}</td>
+    <td>${reservation.check_out_date}</td>
+    <td><span class="payment-status ${reservation.payment_status.toLowerCase().replace(' ', '_')}">${reservation.payment_status}</span></td>
+    <td class="total-amount">TZS ${parseFloat(reservation.total_amount).toLocaleString()}</td>
+    <td class="actions">
+      <button class="btn btn-sm btn-view" onclick="viewReservation('${reservation.booking_id}')" title="View Details">
+        <i class="fa-solid fa-eye"></i>
+      </button>
+      <button class="btn btn-sm btn-checkout" onclick="checkoutReservation('${reservation.booking_id}')" title="Check-out">
+        <i class="fa-solid fa-sign-out-alt"></i>
+      </button>
+    </td>
+  `;
+  
+  // Insert at the beginning
+  tableBody.insertBefore(newRow, tableBody.firstChild);
+  
+  // Update serial numbers for all rows
+  const rows = tableBody.querySelectorAll('tr');
+  rows.forEach((row, index) => {
+    const serialCell = row.querySelector('.serial-number');
+    if (serialCell) {
+      serialCell.textContent = index + 1;
+    }
+  });
+}
+
+// View reservation
+function viewReservation(bookingId) {
+  // Show loading
+  Swal.fire({
+    title: 'Loading...',
+    text: 'Fetching reservation details',
+    allowOutsideClick: false,
+    showConfirmButton: false,
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  // Find the reservation ID from the table
+  const tableRows = document.querySelectorAll('#checkinTableBody tr');
+  let reservationId = null;
+  
+  for (let row of tableRows) {
+    const bookingIdCell = row.querySelector('td:nth-child(2) strong');
+    if (bookingIdCell && bookingIdCell.textContent === bookingId) {
+      // We need to get the reservation ID from the backend
+      break;
+    }
+  }
+
+  // Fetch reservation details from API
+  fetch(`/staff/reservations/by-booking-id/${bookingId}/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const reservation = data.reservation;
+        
+        // Format amount with commas
+        const formattedAmount = parseFloat(reservation.total_amount).toLocaleString('en-US');
+        
+        // Create detailed modal content
+        const modalContent = `
+          <div style="text-align: left; font-family: system-ui, -apple-system, sans-serif; max-height: 70vh; overflow-y: auto;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">📋 Booking Information</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Booking ID:</strong> <span style="font-family: 'Courier New', monospace; background: #e9ecef; padding: 4px 8px; border-radius: 6px; font-size: 16px;">${reservation.booking_id}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Status:</strong> <span style="color: #28a745; font-weight: 600; font-size: 16px;">${reservation.status_display}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Check-in:</strong> <span style="font-size: 16px;">${reservation.check_in_date}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Check-out:</strong> <span style="font-size: 16px;">${reservation.check_out_date}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Guests:</strong> <span style="font-size: 16px;">${reservation.number_of_guests}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Duration:</strong> <span style="font-size: 16px;">${reservation.duration_days} days</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Total Amount:</strong> <span style="color: #28a745; font-weight: 600; font-size: 18px;">TZS ${formattedAmount}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0;"><strong style="font-size: 16px;">Created:</strong> <span style="font-size: 16px;">${reservation.created_at}</span></div>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">👤 Customer Details</h3>
+              <div style="display: flex; gap: 30px;">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Full Name:</strong> <span style="font-size: 16px;">${reservation.customer.full_name}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Email:</strong> <a href="mailto:${reservation.customer.email}" style="color: #007bff; text-decoration: none; font-size: 16px;">${reservation.customer.email}</a></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Phone:</strong> <a href="tel:${reservation.customer.phone_number}" style="color: #007bff; text-decoration: none; font-size: 16px;">${reservation.customer.phone_number}</a></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Nationality:</strong> <span style="font-size: 16px;">${reservation.customer.nationality}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">ID Type:</strong> <span style="font-size: 16px;">${reservation.customer.id_type}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">ID Number:</strong> <span style="font-size: 16px;">${reservation.customer.id_passport_number}</span></div>
+                  <div style="display: flex; justify-content: space-between; padding: 8px 0;"><strong style="font-size: 16px;">Guest Type:</strong> <span style="font-size: 16px;">${reservation.customer.is_regular_guest ? 'Regular Guest' : 'New Guest'} (${reservation.customer.total_reservations} bookings)</span></div>
+                </div>
+                
+                <!-- ID Card Image Box -->
+                <div style="flex: 0 0 350px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <h4 style="margin: 0 0 20px; color: #2F1B14; font-size: 20px; text-align: center; font-weight: 700;">🆔 ID Document</h4>
+                  <div style="width: 320px; height: 200px; border: 3px solid #ddd; border-radius: 15px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    ${reservation.customer.id_passport_photo ? 
+                      `<img src="${reservation.customer.id_passport_photo}" alt="ID Document" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; cursor: pointer;" onclick="openImageModal('${reservation.customer.id_passport_photo}')" title="Click to view full size">` :
+                      `<div style="text-align: center; color: #6c757d; font-size: 16px;">
+                        <i class="fa-solid fa-image" style="font-size: 48px; margin-bottom: 12px; opacity: 0.5;"></i><br>
+                        No ID image uploaded
+                      </div>`
+                    }
+                  </div>
+                  <small style="color: #6c757d; font-size: 14px; margin-top: 12px; text-align: center; font-weight: 600;">${reservation.customer.id_type.replace('_', ' ').toUpperCase()}</small>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">🏨 Room Information</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Room Type:</strong> <span style="font-size: 16px;">${reservation.room_type.name}</span></div>
+                ${reservation.room ? `<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Assigned Room:</strong> <span style="color: #28a745; font-weight: 600; font-size: 16px;">${reservation.room.room_name}</span></div>` : ''}
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Price per Day:</strong> <span style="font-size: 16px;">TZS ${parseFloat(reservation.room_type.price_per_day).toLocaleString('en-US')}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Total Rooms:</strong> <span style="font-size: 16px;">${reservation.room_type.total_rooms}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Available Rooms:</strong> <span style="color: #28a745; font-weight: 600; font-size: 16px;">${reservation.room_type.available_rooms}</span></div>
+                <div style="padding: 8px 0;"><strong style="font-size: 16px;">Description:</strong> <span style="font-size: 16px;">${reservation.room_type.description || 'No description available'}</span></div>
+              </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 12px;">
+              <h3 style="margin: 0 0 20px; color: #2F1B14; font-size: 22px; font-weight: 700;">📝 Additional Information</h3>
+              <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Special Requests:</strong> <span style="font-size: 16px;">${reservation.special_requests || 'None'}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Purpose of Visit:</strong> <span style="font-size: 16px;">${reservation.purpose_of_visit}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e9ecef;"><strong style="font-size: 16px;">Payment Status:</strong> <span style="color: ${reservation.payment_status === 'paid' ? '#28a745' : reservation.payment_status === 'partial' ? '#ffc107' : '#dc3545'}; font-weight: 600; font-size: 16px;">${reservation.payment_status_display}</span></div>
+                <div style="display: flex; justify-content: space-between; padding: 8px 0;"><strong style="font-size: 16px;">Notes:</strong> <span style="font-size: 16px;">No additional notes</span></div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        Swal.fire({
+          title: 'Reservation Details',
+          html: modalContent,
+          width: '95vw',
+          maxWidth: '95vw',
+          showConfirmButton: true,
+          confirmButtonText: 'Close',
+          confirmButtonColor: '#2F1B14',
+          customClass: {
+            popup: 'swal-high-z-index'
+          }
+        });
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: data.message || 'Failed to load reservation details',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          customClass: {
+            popup: 'swal-high-z-index'
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching reservation details:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to load reservation details. Please try again.',
+        icon: 'error',
+        confirmButtonText: 'OK',
+        customClass: {
+          popup: 'swal-high-z-index'
+        }
+      });
+    });
+}
+
+// Open image modal for full-size viewing
+function openImageModal(imageSrc) {
+  Swal.fire({
+    title: 'ID Document',
+    html: `
+      <div style="text-align: center;">
+        <img src="${imageSrc}" alt="ID Document" style="max-width: 100%; max-height: 70vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      </div>
+    `,
+    width: 'auto',
+    showConfirmButton: true,
+    confirmButtonText: 'Close',
+    confirmButtonColor: '#2F1B14',
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999
+    });
+}
+
+// Checkout reservation
+function checkoutReservation(bookingId) {
+  Swal.fire({
+    title: 'Check-out Guest?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#6f42c1',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Yes, check-out!',
+    cancelButtonText: 'Cancel',
+    customClass: {
+      popup: 'swal-high-z-index'
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Show loading
+      Swal.fire({
+        title: 'Processing Check-out...',
+        text: 'Please wait while we process the check-out',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Make AJAX call to process check-out
+      fetch(`/staff/reservations/by-booking-id/${bookingId}/checkout/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          Swal.fire({
+            title: 'Check-out Successful!',
+            icon: 'success',
+            confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            backdrop: true,
+            customClass: {
+              popup: 'swal-high-z-index'
+            }
+          }).then(() => {
+            // Remove the row from the table
+            const tableRows = document.querySelectorAll('#checkinTableBody tr');
+            for (let row of tableRows) {
+              const bookingIdCell = row.querySelector('td:nth-child(2) strong');
+              if (bookingIdCell && bookingIdCell.textContent === bookingId) {
+                row.remove();
+                break;
+              }
+            }
+            
+            // Update serial numbers
+            const remainingRows = document.querySelectorAll('#checkinTableBody tr');
+            remainingRows.forEach((row, index) => {
+              const serialCell = row.querySelector('.serial-number');
+              if (serialCell) {
+                serialCell.textContent = index + 1;
+              }
+            });
+            
+            // Show no data message if no rows left
+            if (remainingRows.length === 0) {
+              const tableBody = document.getElementById('checkinTableBody');
+              const noDataRow = document.createElement('tr');
+              noDataRow.innerHTML = `
+                <td colspan="10" class="no-data">
+                  <div class="no-data-content">
+                    <i class="fa-solid fa-bed"></i>
+                    <p>No checked-in guests found.</p>
+                  </div>
+                </td>
+              `;
+              tableBody.appendChild(noDataRow);
+            }
+          });
+        } else {
+          Swal.fire({
+            title: 'Error!',
+            text: data.message || 'Failed to process check-out',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            backdrop: true,
+            customClass: {
+              popup: 'swal-high-z-index'
+            }
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          title: 'Error!',
+          text: 'An error occurred while processing the check-out.',
+          icon: 'error',
+          confirmButtonText: 'OK',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          backdrop: true,
+          customClass: {
+            popup: 'swal-high-z-index'
+          }
+        });
+      });
+    }
+  });
+}
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Format all amount values with commas
+  const amountElements = document.querySelectorAll('.amount-value');
+  amountElements.forEach(element => {
+    const amount = parseFloat(element.textContent);
+    if (!isNaN(amount)) {
+      element.textContent = amount.toLocaleString('en-US');
+    }
+  });
+  
+  // Search functionality for check-ins
+  const searchInput = document.getElementById('searchCheckins');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const tableRows = document.querySelectorAll('#checkinTableBody tr');
+      
+      tableRows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+  
+  // Search functionality for check-outs
+  const searchCheckoutsInput = document.getElementById('searchCheckouts');
+  if (searchCheckoutsInput) {
+    searchCheckoutsInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const tableRows = document.querySelectorAll('#checkoutTableBody tr');
+      
+      tableRows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+  
+  // Month filter functionality for check-outs
+  const monthFilter = document.getElementById('monthFilter');
+  if (monthFilter) {
+    monthFilter.addEventListener('change', function() {
+      const selectedMonth = this.value;
+      const tableRows = document.querySelectorAll('#checkoutTableBody tr');
+      
+      tableRows.forEach(row => {
+        if (selectedMonth === '' || row.dataset.month === selectedMonth) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      
+      // Auto-search when month is selected
+      if (selectedMonth !== '') {
+        const monthNames = {
+          '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+          '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+          '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+        };
+        
+        const monthName = monthNames[selectedMonth];
+        const searchInput = document.getElementById('searchCheckouts');
+        if (searchInput) {
+          searchInput.value = monthName;
+          searchInput.dispatchEvent(new Event('input'));
+        }
+      } else {
+        // Clear search when "All Months" is selected
+        const searchInput = document.getElementById('searchCheckouts');
+        if (searchInput) {
+          searchInput.value = '';
+          searchInput.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

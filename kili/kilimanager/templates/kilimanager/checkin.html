@@ -1,0 +1,478 @@
+{% extends 'kilimanager/managerbase.html' %}
+{% load static %}
+
+{% block title %}Check-in/Check-out{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Check-in Management</h2>
+  <div class="header-actions">
+    <p style="color: #6c757d; margin: 0; font-style: italic;">View-only access - Check-in processing is handled by staff</p>
+  </div>
+</div>
+
+<!-- Check-in Results Table -->
+<div class="checkin-results-container" id="checkinResults">
+  <div class="table-header">
+    <h3>All Checked-in Guests</h3>
+    <div class="table-actions">
+      <input type="text" id="searchCheckins" placeholder="Search check-ins..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="checkin-table">
+      <thead>
+        <tr>
+          <th>S/N</th>
+          <th>Booking ID</th>
+          <th>Customer Name</th>
+          <th>Room Type</th>
+          <th>Room</th>
+          <th>Check-in Date</th>
+          <th>Check-out Date</th>
+          <th>Payment Status</th>
+          <th>Total Amount</th>
+        </tr>
+      </thead>
+      <tbody id="checkinTableBody">
+        {% for reservation in checked_in_reservations %}
+        <tr>
+          <td class="serial-number">{{ forloop.counter }}</td>
+          <td><strong>{{ reservation.booking_id }}</strong></td>
+          <td>{{ reservation.customer.full_name }}</td>
+          <td>{{ reservation.room_type.name }}</td>
+          <td>{{ reservation.room.room_name|default:"Not Assigned" }}</td>
+          <td>{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td>{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td><span class="payment-status {{ reservation.payment_status }}">{{ reservation.get_payment_status_display }}</span></td>
+          <td class="total-amount">TZS <span class="amount-value">{{ reservation.total_amount|floatformat:0 }}</span></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-bed"></i>
+              <p>No checked-in guests found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Checked-out Guests Table -->
+<div class="checkout-results-container" id="checkoutResults">
+  <div class="table-header">
+    <h3>Checked-out Guests</h3>
+    <div class="table-actions">
+      <select id="monthFilter" class="filter-select">
+        <option value="">All Months</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+      <input type="text" id="searchCheckouts" placeholder="Search check-outs..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="checkout-table">
+      <thead>
+        <tr>
+          <th>S/N</th>
+          <th>Booking ID</th>
+          <th>Customer Name</th>
+          <th>Room Type</th>
+          <th>Room</th>
+          <th>Check-in Date</th>
+          <th>Check-out Date</th>
+          <th>Payment Status</th>
+          <th>Total Amount</th>
+        </tr>
+      </thead>
+      <tbody id="checkoutTableBody">
+        {% for reservation in checked_out_reservations %}
+        <tr data-month="{{ reservation.check_out_date|date:'m' }}">
+          <td class="serial-number">{{ forloop.counter }}</td>
+          <td><strong>{{ reservation.booking_id }}</strong></td>
+          <td>{{ reservation.customer.full_name }}</td>
+          <td>{{ reservation.room_type.name }}</td>
+          <td>{{ reservation.room.room_name|default:"Not Assigned" }}</td>
+          <td>{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td>{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td><span class="payment-status {{ reservation.payment_status }}">{{ reservation.get_payment_status_display }}</span></td>
+          <td class="total-amount">TZS <span class="amount-value">{{ reservation.total_amount|floatformat:0 }}</span></td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-sign-out-alt"></i>
+              <p>No checked-out guests found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.page-header h2 {
+  color: #2F1B14;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #2F1B14;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #4A2C2A;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Check-in Results Table */
+.checkin-results-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+/* Checked-out Results Table */
+.checkout-results-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.table-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 250px;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.checkin-table,
+.checkout-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.checkin-table th,
+.checkout-table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #2F1B14;
+  border-bottom: 2px solid #eee;
+}
+
+.checkin-table td,
+.checkout-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.serial-number {
+  text-align: center;
+  font-weight: 600;
+  color: #2F1B14;
+  width: 60px;
+}
+
+.payment-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.payment-status.paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.payment-status.not_paid {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.payment-status.partial {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.total-amount {
+  font-weight: 600;
+  color: #28a745;
+}
+
+
+/* SweetAlert2 High Z-Index */
+.swal-high-z-index {
+  z-index: 99999 !important;
+}
+
+.swal2-backdrop {
+  z-index: 99998 !important;
+}
+
+.swal2-container {
+  z-index: 99999 !important;
+}
+
+.swal2-popup {
+  z-index: 99999 !important;
+}
+
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-data-content {
+  color: #6c757d;
+}
+
+.no-data-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .reservation-lookup {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .reservation-input {
+    width: 100%;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+</style>
+
+<script>
+// Configure SweetAlert2 global settings
+Swal.mixin({
+  customClass: {
+    popup: 'swal-high-z-index'
+  }
+});
+
+
+// Check-in functionality removed - managers can only view checked-in guests
+
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Format all amount values with commas
+  const amountElements = document.querySelectorAll('.amount-value');
+  amountElements.forEach(element => {
+    const amount = parseFloat(element.textContent);
+    if (!isNaN(amount)) {
+      element.textContent = amount.toLocaleString('en-US');
+    }
+  });
+  
+  // Search functionality for checked-in guests
+  const searchInput = document.getElementById('searchCheckins');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const tableRows = document.querySelectorAll('#checkinTableBody tr');
+      
+      tableRows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+  
+  // Search functionality for checked-out guests
+  const searchCheckoutsInput = document.getElementById('searchCheckouts');
+  if (searchCheckoutsInput) {
+    searchCheckoutsInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const tableRows = document.querySelectorAll('#checkoutTableBody tr');
+      
+      tableRows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+  
+  // Month filter functionality for checked-out guests
+  const monthFilter = document.getElementById('monthFilter');
+  if (monthFilter) {
+    monthFilter.addEventListener('change', function() {
+      const selectedMonth = this.value;
+      const tableRows = document.querySelectorAll('#checkoutTableBody tr');
+      
+      tableRows.forEach(row => {
+        if (selectedMonth === '' || row.dataset.month === selectedMonth) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      
+      // Auto-search when month is selected
+      if (selectedMonth !== '') {
+        const monthNames = {
+          '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+          '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+          '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+        };
+        
+        const monthName = monthNames[selectedMonth];
+        const searchInput = document.getElementById('searchCheckouts');
+        if (searchInput) {
+          searchInput.value = monthName;
+          searchInput.dispatchEvent(new Event('input'));
+        }
+      } else {
+        // Clear search when "All Months" is selected
+        const searchInput = document.getElementById('searchCheckouts');
+        if (searchInput) {
+          searchInput.value = '';
+          searchInput.dispatchEvent(new Event('input'));
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

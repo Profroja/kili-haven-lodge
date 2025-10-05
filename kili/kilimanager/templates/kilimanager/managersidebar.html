@@ -1,0 +1,61 @@
+{% load static %}
+<div class="brand">
+  <div class="brand-content">
+    <div class="brand-text">
+      <span>Kili Haven Lodge</span>
+    </div>
+    <img src="{% static 'images/logo-kili.png' %}" alt="Kili Haven Lodge Logo" class="brand-logo">
+  </div>
+</div>
+
+<ul id="menu">
+  <li class="{% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}">
+    <a href="{% url 'manager_dashboard' %}">
+      <i class="fa-solid fa-house"></i>
+      <span>Dashboard</span>
+    </a>
+  </li>
+  
+  <li class="{% if request.resolver_match.url_name == 'users' %}active{% endif %}">
+    <a href="{% url 'users' %}">
+      <i class="fa-solid fa-users"></i>
+      <span>Manage Users</span>
+    </a>
+  </li>
+  
+  <li class="{% if request.resolver_match.url_name == 'manager_sales' %}active{% endif %}">
+    <a href="{% url 'manager_sales' %}">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>Sales</span>
+    </a>
+  </li>
+
+  
+
+  
+  <li>
+    <a href="/auth/logout/">
+      <i class="fa-solid fa-right-from-bracket"></i>
+      <span>Sign Out</span>
+    </a>
+  </li>
+</ul>
+
+<script>
+// Add click event listeners to menu items for active state management
+document.addEventListener('DOMContentLoaded', function() {
+  const menuItems = document.querySelectorAll('#menu li a');
+  
+  menuItems.forEach(function(item) {
+    item.addEventListener('click', function(e) {
+      // Remove active class from all menu items
+      document.querySelectorAll('#menu li').forEach(function(li) {
+        li.classList.remove('active');
+      });
+      
+      // Add active class to clicked item's parent
+      this.parentElement.classList.add('active');
+    });
+  });
+});
+</script>

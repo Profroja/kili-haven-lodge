@@ -1,0 +1,941 @@
+{% extends 'kilimanager/managerbase.html' %}
+{% load static %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>User Management</h2>
+  <button class="btn btn-primary" onclick="openAddUserModal()">
+    <i class="fa-solid fa-plus"></i> Add New User
+  </button>
+</div>
+
+<div class="users-table-container">
+  <div class="table-header">
+    <h3>System Users</h3>
+    <div class="table-actions">
+      <input type="text" id="searchUsers" placeholder="Search users..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Mobile</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody">
+        {% for user in users %}
+        <tr>
+          <td>
+            <div class="user-info">
+              <strong>{{ user.get_full_name|default:user.username }}</strong>
+              <small>{{ user.username }}</small>
+            </div>
+          </td>
+          <td class="email">{{ user.email }}</td>
+          <td class="mobile">{{ user.mobile_number }}</td>
+          <td>
+            <span class="role-badge role-{{ user.role }}">
+              {{ user.get_role_display }}
+            </span>
+          </td>
+          <td>
+            <span class="status {% if user.is_active %}active{% else %}inactive{% endif %}">
+              {% if user.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td class="date-joined">{{ user.date_joined|date:"M d, Y" }}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-edit" onclick="editUser({{ user.id }})">
+              <i class="fa-solid fa-edit"></i>
+            </button>
+            {% if user.id != request.user.id %}
+            <button class="btn btn-sm btn-deactivate" onclick="deactivateUser({{ user.id }})">
+              <i class="fa-solid fa-{% if user.is_active %}user-slash{% else %}user-check{% endif %}"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-users"></i>
+              <p>No users found. Add your first user to get started.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add New User</h3>
+      <span class="close" onclick="closeAddUserModal()">&times;</span>
+    </div>
+    <form id="addUserForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">First Name *</label>
+          <input type="text" id="firstName" name="first_name" required placeholder="Enter first name">
+        </div>
+        
+        <div class="form-group">
+          <label for="lastName">Last Name *</label>
+          <input type="text" id="lastName" name="last_name" required placeholder="Enter last name">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="userEmail">Email Address *</label>
+        <input type="email" id="userEmail" name="email" required placeholder="user@example.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="userMobile">Mobile Number *</label>
+        <input type="tel" id="userMobile" name="mobile_number" required placeholder="+255 123 456 789">
+      </div>
+      
+      <div class="form-group">
+        <label for="userRole">Role *</label>
+        <select id="userRole" name="role" required>
+          <option value="">Select Role</option>
+          <option value="manager">Manager</option>
+          <option value="lodge_attendant">Lodge Attendant</option>
+        </select>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="userPassword">Password *</label>
+          <input type="password" id="userPassword" name="password" required placeholder="Enter password">
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password *</label>
+          <input type="password" id="confirmPassword" name="confirm_password" required placeholder="Confirm password">
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeAddUserModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit User</h3>
+      <span class="close" onclick="closeEditUserModal()">&times;</span>
+    </div>
+    <form id="editUserForm">
+      <input type="hidden" id="editUserId" name="user_id">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="editFirstName">First Name *</label>
+          <input type="text" id="editFirstName" name="first_name" required placeholder="Enter first name">
+        </div>
+        
+        <div class="form-group">
+          <label for="editLastName">Last Name *</label>
+          <input type="text" id="editLastName" name="last_name" required placeholder="Enter last name">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="editUserEmail">Email Address *</label>
+        <input type="email" id="editUserEmail" name="email" required placeholder="user@example.com">
+      </div>
+      
+      <div class="form-group">
+        <label for="editUserMobile">Mobile Number *</label>
+        <input type="tel" id="editUserMobile" name="mobile_number" required placeholder="+255 123 456 789">
+      </div>
+      
+      <div class="form-group">
+        <label for="editUserRole">Role *</label>
+        <select id="editUserRole" name="role" required>
+          <option value="">Select Role</option>
+          <option value="manager">Manager</option>
+          <option value="lodge_attendant">Lodge Attendant</option>
+        </select>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="editUserPassword">New Password (Optional)</label>
+          <input type="password" id="editUserPassword" name="password" placeholder="Leave blank to keep current">
+        </div>
+        
+        <div class="form-group">
+          <label for="editConfirmPassword">Confirm New Password</label>
+          <input type="password" id="editConfirmPassword" name="confirm_password" placeholder="Confirm new password">
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeEditUserModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update User</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.page-header h2 {
+  color: #2F1B14;
+  margin: 0;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #2F1B14;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #4A2C2A;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-edit {
+  background: #28a745;
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #218838;
+}
+
+.btn-deactivate {
+  background: #ffc107;
+  color: #212529;
+}
+
+.btn-deactivate:hover {
+  background: #e0a800;
+}
+
+.users-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.table-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 250px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #2F1B14;
+  border-bottom: 2px solid #eee;
+}
+
+.users-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.user-info strong {
+  display: block;
+  color: #2F1B14;
+  margin-bottom: 4px;
+}
+
+.user-info small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.email {
+  color: #007bff;
+  font-weight: 500;
+}
+
+.mobile {
+  font-family: monospace;
+  color: #6c757d;
+}
+
+.role-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.role-manager {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.role-lodge_attendant {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.date-joined {
+  color: #6c757d;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-data-content {
+  color: #6c757d;
+}
+
+.no-data-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 2000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: white;
+  margin: 3% auto;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #000;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  padding: 0 20px;
+}
+
+.form-row .form-group {
+  flex: 1;
+  margin-bottom: 20px;
+  padding: 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2F1B14;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #2F1B14;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 0 0 12px 12px;
+}
+
+/* SweetAlert2 High Z-Index */
+.swal-high-z-index {
+  z-index: 99999 !important;
+}
+
+.swal2-backdrop {
+  z-index: 99998 !important;
+}
+
+.swal2-container {
+  z-index: 99999 !important;
+}
+
+.swal2-popup {
+  z-index: 99999 !important;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 5% auto;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .form-row .form-group {
+    padding: 0 20px;
+  }
+}
+</style>
+
+<script>
+// Configure SweetAlert2 global settings
+Swal.mixin({
+  customClass: {
+    popup: 'swal-high-z-index'
+  },
+  zIndex: 99999
+});
+
+// Modal functions
+function openAddUserModal() {
+  document.getElementById('addUserModal').style.display = 'block';
+}
+
+function closeAddUserModal() {
+  document.getElementById('addUserModal').style.display = 'none';
+  document.getElementById('addUserForm').reset();
+}
+
+function openEditUserModal() {
+  document.getElementById('editUserModal').style.display = 'block';
+}
+
+function closeEditUserModal() {
+  document.getElementById('editUserModal').style.display = 'none';
+  document.getElementById('editUserForm').reset();
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+  const addModal = document.getElementById('addUserModal');
+  const editModal = document.getElementById('editUserModal');
+  
+  if (event.target == addModal) {
+    closeAddUserModal();
+  }
+  if (event.target == editModal) {
+    closeEditUserModal();
+  }
+}
+
+// Search functionality
+document.getElementById('searchUsers').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const tableRows = document.querySelectorAll('#usersTableBody tr');
+  
+  tableRows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Edit user function
+function editUser(userId) {
+  // Find the user data from the table
+  const tableRow = document.querySelector(`button[onclick="editUser(${userId})"]`).closest('tr');
+  const userInfo = tableRow.querySelector('.user-info');
+  const fullName = userInfo.querySelector('strong').textContent;
+  const username = userInfo.querySelector('small').textContent;
+  const email = tableRow.querySelector('.email').textContent;
+  const mobile = tableRow.querySelector('.mobile').textContent;
+  const roleBadge = tableRow.querySelector('.role-badge');
+  const role = roleBadge.classList.contains('role-manager') ? 'manager' : 'lodge_attendant';
+  
+  // Split full name
+  const nameParts = fullName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+  
+  // Populate the edit form
+  document.getElementById('editUserId').value = userId;
+  document.getElementById('editFirstName').value = firstName;
+  document.getElementById('editLastName').value = lastName;
+  document.getElementById('editUserEmail').value = email;
+  document.getElementById('editUserMobile').value = mobile;
+  document.getElementById('editUserRole').value = role;
+  
+  // Clear password fields
+  document.getElementById('editUserPassword').value = '';
+  document.getElementById('editConfirmPassword').value = '';
+  
+  // Open the edit modal
+  openEditUserModal();
+}
+
+// Deactivate user function
+function deactivateUser(userId) {
+  // Find the user data from the table
+  const tableRow = document.querySelector(`button[onclick="deactivateUser(${userId})"]`).closest('tr');
+  const userInfo = tableRow.querySelector('.user-info');
+  const fullName = userInfo.querySelector('strong').textContent;
+  const statusElement = tableRow.querySelector('.status');
+  const isActive = statusElement.textContent.trim() === 'Active';
+  const actionText = isActive ? 'deactivate' : 'activate';
+  
+  Swal.fire({
+    title: `Are you sure?`,
+    text: `You are about to ${actionText} "${fullName}".`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ffc107',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: `Yes, ${actionText}!`,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    backdrop: true,
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999
+  }).then((result) => {
+    if (result.isConfirmed) {
+      // Make POST request
+      fetch(`/manager/users/deactivate/${userId}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.status === 'success') {
+          Swal.fire({
+            title: 'Success!',
+            text: result.message,
+            icon: 'success',
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            backdrop: true,
+            customClass: {
+              popup: 'swal-high-z-index'
+            },
+            zIndex: 99999
+          }).then(() => {
+            location.reload(); // Refresh the page to show updated data
+          });
+        } else {
+          Swal.fire({
+            title: 'Error!',
+            text: result.message,
+            icon: 'error',
+            timer: 3000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            backdrop: true,
+            customClass: {
+              popup: 'swal-high-z-index'
+            },
+            zIndex: 99999
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          title: 'Error!',
+          text: 'An error occurred while updating the user status.',
+          icon: 'error',
+          timer: 3000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          backdrop: true,
+          customClass: {
+            popup: 'swal-high-z-index'
+          },
+          zIndex: 99999
+        });
+      });
+    }
+  });
+}
+
+// Form submission - Add User
+document.getElementById('addUserForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const data = {
+    first_name: formData.get('first_name'),
+    last_name: formData.get('last_name'),
+    email: formData.get('email'),
+    mobile_number: formData.get('mobile_number'),
+    role: formData.get('role'),
+    password: formData.get('password'),
+    confirm_password: formData.get('confirm_password')
+  };
+  
+  fetch('/manager/users/add/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.status === 'success') {
+      Swal.fire({
+        title: 'Success!',
+        text: 'User created successfully!',
+        icon: 'success',
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        backdrop: true,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999
+      }).then(() => {
+        closeAddUserModal();
+        location.reload(); // Refresh the page to show new user
+      });
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: result.message,
+        icon: 'error',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        backdrop: true,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire({
+      title: 'Error!',
+      text: 'An error occurred while creating the user.',
+      icon: 'error',
+      timer: 3000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      backdrop: true,
+      customClass: {
+        popup: 'swal-high-z-index'
+      },
+      zIndex: 99999
+    });
+  });
+});
+
+// Form submission - Edit User
+document.getElementById('editUserForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const userId = formData.get('user_id');
+  const data = {
+    first_name: formData.get('first_name'),
+    last_name: formData.get('last_name'),
+    email: formData.get('email'),
+    mobile_number: formData.get('mobile_number'),
+    role: formData.get('role'),
+    password: formData.get('password'),
+    confirm_password: formData.get('confirm_password')
+  };
+  
+  fetch(`/manager/users/edit/${userId}/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(result => {
+    if (result.status === 'success') {
+      Swal.fire({
+        title: 'Success!',
+        text: 'User updated successfully!',
+        icon: 'success',
+        timer: 2000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        backdrop: true,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999
+      }).then(() => {
+        closeEditUserModal();
+        location.reload(); // Refresh the page to show updated user
+      });
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: result.message,
+        icon: 'error',
+        timer: 3000,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        backdrop: true,
+        customClass: {
+          popup: 'swal-high-z-index'
+        },
+        zIndex: 99999
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire({
+      title: 'Error!',
+      text: 'An error occurred while updating the user.',
+      icon: 'error',
+      timer: 3000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      backdrop: true,
+      customClass: {
+        popup: 'swal-high-z-index'
+      },
+      zIndex: 99999
+    });
+  });
+});
+
+// Navigation functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const menuItems = document.querySelectorAll("#menu li");
+  menuItems.forEach(item => {
+    item.addEventListener('click', function() {
+      const text = this.querySelector('span').textContent.trim();
+      
+      // Remove active class from all items
+      menuItems.forEach(i => i.classList.remove('active'));
+      
+      // Add active class to clicked item
+      this.classList.add('active');
+      
+      // Navigate based on menu item
+      switch(text) {
+        case 'Dashboard':
+          window.location.href = '/manager/dashboard/';
+          break;
+        case 'Manage Users':
+          window.location.href = '/manager/users/';
+          break;
+        case 'Rooms':
+          window.location.href = '/manager/rooms/';
+          break;
+        case 'Reservations':
+          // No action - page not implemented yet
+          break;
+        case 'Settings':
+          // No action - page not implemented yet
+          break;
+        case 'Password':
+          // No action - page not implemented yet
+          break;
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,552 @@
+{% extends 'kilimanager/managerbase.html' %}
+{% load static %}
+
+{% block title %}Reservations{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Pending Reservations</h2>
+  <div class="header-actions">
+    <select id="statusFilter" class="filter-select">
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="waiting_checkin">Waiting Check-in</option>
+    </select>
+  </div>
+</div>
+
+<div class="reservations-table-container">
+  <div class="table-header">
+    <h3>Pending & Waiting Check-in</h3>
+    <div class="table-actions">
+      <input type="text" id="searchReservations" placeholder="Search reservations..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="reservations-table">
+      <thead>
+        <tr>
+          <th>Booking ID</th>
+          <th>Customer</th>
+          <th>Room Type</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
+          <th>Guests</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody id="reservationsTableBody">
+        {% for reservation in reservations %}
+        <tr data-status="{{ reservation.status }}" data-reservation-id="{{ reservation.id }}">
+          <td class="booking-id">
+            <strong style="color: #2F1B14; font-family: 'Courier New', monospace; letter-spacing: 1px;">{{ reservation.booking_id }}</strong>
+          </td>
+          <td class="customer-name">
+            <strong>{{ reservation.customer.full_name }}</strong>
+          </td>
+          <td>
+            <div class="room-info">
+              <strong>{{ reservation.room_type.name }}</strong>
+              <small>TZS {{ reservation.room_type.price_per_day|floatformat:0 }}/day</small>
+            </div>
+          </td>
+          <td class="date">{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td class="date">{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td class="guests">{{ reservation.number_of_guests }}</td>
+          <td class="amount">TZS <span class="price-amount">{{ reservation.total_amount|floatformat:0 }}</span></td>
+          <td>
+            <span class="status status-{{ reservation.status }}">
+              {{ reservation.get_status_display }}
+            </span>
+          </td>
+          <td class="created">{{ reservation.created_at|date:"M d, Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-calendar-check"></i>
+              <p>No reservations found. Bookings will appear here when customers make reservations.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Completed Reservations Table -->
+<div class="completed-reservations-container">
+  <div class="table-header">
+    <h3>Completed Reservations (Checked-out)</h3>
+    <div class="table-actions">
+      <select id="completedMonthFilter" class="filter-select">
+        <option value="">All Months</option>
+        <option value="01">January</option>
+        <option value="02">February</option>
+        <option value="03">March</option>
+        <option value="04">April</option>
+        <option value="05">May</option>
+        <option value="06">June</option>
+        <option value="07">July</option>
+        <option value="08">August</option>
+        <option value="09">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+      </select>
+      <input type="text" id="searchCompleted" placeholder="Search completed reservations..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="completed-reservations-table">
+      <thead>
+        <tr>
+          <th>Booking ID</th>
+          <th>Customer</th>
+          <th>Room Type</th>
+          <th>Room</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
+          <th>Guests</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Completed</th>
+        </tr>
+      </thead>
+      <tbody id="completedReservationsTableBody">
+        {% for reservation in completed_reservations %}
+        <tr data-month="{{ reservation.check_out_date|date:'m' }}">
+          <td class="booking-id">
+            <strong style="color: #2F1B14; font-family: 'Courier New', monospace; letter-spacing: 1px;">{{ reservation.booking_id }}</strong>
+          </td>
+          <td class="customer-name">
+            <strong>{{ reservation.customer.full_name }}</strong>
+          </td>
+          <td>
+            <div class="room-info">
+              <strong>{{ reservation.room_type.name }}</strong>
+              <small>TZS {{ reservation.room_type.price_per_day|floatformat:0 }}/day</small>
+            </div>
+          </td>
+          <td class="room-name">{{ reservation.room.room_name|default:"Not Assigned" }}</td>
+          <td class="date">{{ reservation.check_in_date|date:"M d, Y" }}</td>
+          <td class="date">{{ reservation.check_out_date|date:"M d, Y" }}</td>
+          <td class="guests">{{ reservation.number_of_guests }}</td>
+          <td class="amount">TZS <span class="price-amount">{{ reservation.total_amount|floatformat:0 }}</span></td>
+          <td>
+            <span class="status status-checked_out">
+              {{ reservation.get_status_display }}
+            </span>
+          </td>
+          <td class="created">{{ reservation.check_out_date|date:"M d, Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="10" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-check-circle"></i>
+              <p>No completed reservations found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Reservation Details Modal -->
+<div id="reservationModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Reservation Details</h3>
+      <span class="close" onclick="closeReservationModal()">&times;</span>
+    </div>
+    <div id="reservationDetails" class="modal-body">
+      <!-- Reservation details will be loaded here -->
+    </div>
+  </div>
+</div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.page-header h2 {
+  color: #2F1B14;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+}
+
+
+.reservations-table-container,
+.completed-reservations-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.table-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 250px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.reservations-table,
+.completed-reservations-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reservations-table th,
+.completed-reservations-table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #2F1B14;
+  border-bottom: 2px solid #eee;
+}
+
+.reservations-table td,
+.completed-reservations-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.customer-name {
+  font-weight: 600;
+  color: #2F1B14;
+}
+
+.room-info strong {
+  display: block;
+  color: #2F1B14;
+  margin-bottom: 4px;
+}
+
+.room-info small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.booking-id {
+  text-align: center;
+  font-weight: 600;
+}
+
+.date, .guests, .created, .room-name {
+  text-align: center;
+  font-weight: 500;
+}
+
+.amount {
+  font-weight: 600;
+  color: #28a745;
+  text-align: right;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-confirmed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-waiting_checkin {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.status-checked_in {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-cancelled {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-checked_out {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-data-content {
+  color: #6c757d;
+}
+
+.no-data-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 2000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: white;
+  margin: 5% auto;
+  padding: 0;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #000;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10% auto;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .step-indicator {
+    padding: 0 10px;
+  }
+  
+  .step-line {
+    width: 40px;
+  }
+}
+</style>
+
+<script>
+// Configure SweetAlert2 global settings
+Swal.mixin({
+  customClass: {
+    popup: 'swal-high-z-index'
+  },
+  zIndex: 99999
+});
+
+// Search functionality
+document.getElementById('searchReservations').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const tableRows = document.querySelectorAll('#reservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Status filter functionality
+document.getElementById('statusFilter').addEventListener('change', function() {
+  const selectedStatus = this.value;
+  const tableRows = document.querySelectorAll('#reservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    if (selectedStatus === '' || row.dataset.status === selectedStatus) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Search functionality for completed reservations
+document.getElementById('searchCompleted').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const tableRows = document.querySelectorAll('#completedReservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Month filter functionality for completed reservations
+document.getElementById('completedMonthFilter').addEventListener('change', function() {
+  const selectedMonth = this.value;
+  const tableRows = document.querySelectorAll('#completedReservationsTableBody tr');
+  
+  tableRows.forEach(row => {
+    if (selectedMonth === '' || row.dataset.month === selectedMonth) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+  
+  // Auto-search when month is selected
+  if (selectedMonth !== '') {
+    const monthNames = {
+      '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+      '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+      '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+    };
+    
+    const monthName = monthNames[selectedMonth];
+    const searchInput = document.getElementById('searchCompleted');
+    if (searchInput) {
+      searchInput.value = monthName;
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  } else {
+    // Clear search when "All Months" is selected
+    const searchInput = document.getElementById('searchCompleted');
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.dispatchEvent(new Event('input'));
+    }
+  }
+});
+
+
+// Format numbers with commas
+function formatNumberWithCommas(number) {
+  return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+// Apply number formatting on page load
+document.addEventListener('DOMContentLoaded', function() {
+  // Format all price amounts
+  const priceAmounts = document.querySelectorAll('.price-amount');
+  priceAmounts.forEach(element => {
+    const number = parseFloat(element.textContent);
+    if (!isNaN(number)) {
+      element.textContent = formatNumberWithCommas(number);
+    }
+  });
+});
+
+
+// Navigation functionality - now handled by href links
+// Active state will be managed by Django template logic
+</script>
+{% endblock %}

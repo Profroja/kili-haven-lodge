@@ -1,0 +1,891 @@
+{% extends 'kilistaff/staffbase.html' %}
+
+{% block title %}Staff Rooms - Kili Haven Lodge{% endblock %}
+
+{% block content %}
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="page-header">
+  <h2>Room Availability</h2>
+  <p class="page-description">View all room types and their current availability status</p>
+</div>
+
+<!-- Room Types Overview -->
+<div class="rooms-table-container">
+  <div class="table-header">
+    <h3>Room Types Overview</h3>
+    <div class="table-actions">
+      <button class="btn btn-primary" onclick="openAddRoomTypeModal()">
+        <i class="fa-solid fa-plus"></i> Add Room Type
+      </button>
+      <input type="text" id="searchRoomTypes" placeholder="Search room types..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="rooms-table">
+      <thead>
+        <tr>
+          <th>S/N</th>
+          <th>Room Type</th>
+          <th>Price per Day</th>
+          <th>Total Rooms</th>
+          <th>Available</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="roomTypesTableBody">
+        {% for room_type in room_types %}
+        <tr>
+          <td class="serial-number">{{ forloop.counter }}</td>
+          <td>
+            <div class="room-info">
+              <strong>{{ room_type.name }}</strong>
+              {% if room_type.description %}
+                <small>{{ room_type.description|truncatechars:50 }}</small>
+              {% endif %}
+            </div>
+          </td>
+          <td class="price">TZS <span class="price-amount">{{ room_type.price_per_day|floatformat:0 }}</span></td>
+          <td class="total-rooms">{{ room_type.total_rooms }}</td>
+          <td class="available-rooms">{{ room_type.available_rooms }}</td>
+          <td>
+            <span class="status {% if room_type.is_active %}active{% else %}inactive{% endif %}">
+              {% if room_type.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td class="actions">
+            <button class="btn btn-sm btn-primary" onclick="openEditRoomTypeModal({{ room_type.id }}, '{{ room_type.name }}', {{ room_type.price_per_day }}, '{{ room_type.description }}', {{ room_type.total_rooms }}, {{ room_type.is_active|yesno:"true,false" }})">
+              <i class="fa-solid fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRoomType({{ room_type.id }})">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-bed"></i>
+              <p>No room types found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Individual Rooms for Each Room Type -->
+{% for room_type in room_types %}
+<div class="rooms-table-container room-details-container">
+  <div class="table-header">
+    <h3>{{ room_type.name }} - Individual Rooms</h3>
+    <div class="table-actions">
+      <button class="btn btn-primary btn-sm" onclick="openAddRoomModal({{ room_type.id }}, '{{ room_type.name }}')">
+        <i class="fa-solid fa-plus"></i> Add Room
+      </button>
+      <input type="text" id="searchRooms{{ room_type.id }}" placeholder="Search rooms..." class="search-input">
+    </div>
+  </div>
+  
+  <div class="table-wrapper">
+    <table class="rooms-table individual-rooms-table">
+      <thead>
+        <tr>
+          <th>S/N</th>
+          <th>Room Name</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="roomsTableBody{{ room_type.id }}">
+        {% for room in room_type.rooms.all %}
+        <tr>
+          <td class="serial-number">{{ forloop.counter }}</td>
+          <td>
+            <div class="room-info">
+              <strong>{{ room.room_name }}</strong>
+            </div>
+          </td>
+          <td>
+            <span class="status status-{{ room.room_status }}">
+              {% if room.room_status == 'available' %}Available{% elif room.room_status == 'reserved' %}Reserved{% elif room.room_status == 'checked_in' %}Checked In{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td class="created-date">{{ room.created_at|date:"M d, Y" }}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-primary" onclick="openEditRoomModal({{ room.id }}, '{{ room.room_name }}', {{ room.is_active|yesno:"true,false" }})">
+              <i class="fa-solid fa-edit"></i>
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="deleteRoom({{ room.id }})">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="no-data">
+            <div class="no-data-content">
+              <i class="fa-solid fa-door-open"></i>
+              <p>No individual rooms found for this type.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Add Room Type Modal -->
+<div id="addRoomTypeModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add New Room Type</h3>
+      <span class="close" onclick="closeModal('addRoomTypeModal')">&times;</span>
+    </div>
+    <form id="addRoomTypeForm">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="roomTypeName">Room Type Name</label>
+        <input type="text" id="roomTypeName" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="roomTypePrice">Price per Day (TZS)</label>
+        <input type="number" id="roomTypePrice" name="price_per_day" required>
+      </div>
+      <div class="form-group">
+        <label for="roomTypeDescription">Description</label>
+        <textarea id="roomTypeDescription" name="description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="roomTypeTotalRooms">Total Rooms</label>
+        <input type="number" id="roomTypeTotalRooms" name="total_rooms" required>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="roomTypeActive" name="is_active" checked>
+          Active
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addRoomTypeModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Room Type</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Room Type Modal -->
+<div id="editRoomTypeModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit Room Type</h3>
+      <span class="close" onclick="closeModal('editRoomTypeModal')">&times;</span>
+    </div>
+    <form id="editRoomTypeForm">
+      {% csrf_token %}
+      <input type="hidden" id="editRoomTypeId" name="room_type_id">
+      <div class="form-group">
+        <label for="editRoomTypeName">Room Type Name</label>
+        <input type="text" id="editRoomTypeName" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="editRoomTypePrice">Price per Day (TZS)</label>
+        <input type="number" id="editRoomTypePrice" name="price_per_day" required>
+      </div>
+      <div class="form-group">
+        <label for="editRoomTypeDescription">Description</label>
+        <textarea id="editRoomTypeDescription" name="description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="editRoomTypeTotalRooms">Total Rooms</label>
+        <input type="number" id="editRoomTypeTotalRooms" name="total_rooms" required>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="editRoomTypeActive" name="is_active">
+          Active
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editRoomTypeModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Room Type</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Add Room Modal -->
+<div id="addRoomModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add New Room</h3>
+      <span class="close" onclick="closeModal('addRoomModal')">&times;</span>
+    </div>
+    <form id="addRoomForm">
+      {% csrf_token %}
+      <input type="hidden" id="addRoomTypeId" name="room_type_id">
+      <div class="form-group">
+        <label for="roomName">Room Name</label>
+        <input type="text" id="roomName" name="room_name" required>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="roomActive" name="is_active" value="on" checked>
+          Active
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('addRoomModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Room</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Room Modal -->
+<div id="editRoomModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Edit Room</h3>
+      <span class="close" onclick="closeModal('editRoomModal')">&times;</span>
+    </div>
+    <form id="editRoomForm">
+      {% csrf_token %}
+      <input type="hidden" id="editRoomId" name="room_id">
+      <div class="form-group">
+        <label for="editRoomName">Room Name</label>
+        <input type="text" id="editRoomName" name="room_name" required>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="editRoomActive" name="is_active" value="on">
+          Active
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('editRoomModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Room</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.page-header {
+  margin-bottom: 30px;
+  padding: 20px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.page-header h2 {
+  color: #2F1B14;
+  margin: 0 0 8px 0;
+}
+
+.page-description {
+  color: #6c757d;
+  margin: 0;
+  font-size: 14px;
+}
+
+
+.rooms-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.room-details-container {
+  margin-top: 20px;
+  border-left: 4px solid #2F1B14;
+}
+
+.serial-number {
+  text-align: center;
+  font-weight: 600;
+  color: #2F1B14;
+  width: 60px;
+}
+
+.individual-rooms-table {
+  font-size: 14px;
+}
+
+.individual-rooms-table th {
+  padding: 12px 15px;
+}
+
+.individual-rooms-table td {
+  padding: 12px 15px;
+}
+
+.created-date {
+  color: #6c757d;
+  font-size: 13px;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+}
+
+.table-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 250px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.rooms-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rooms-table th {
+  background: #f8f9fa;
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #2F1B14;
+  border-bottom: 2px solid #eee;
+}
+
+.rooms-table td {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.room-info strong {
+  display: block;
+  color: #2F1B14;
+  margin-bottom: 4px;
+}
+
+.room-info small {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+.price {
+  font-weight: 600;
+  color: #28a745;
+}
+
+.total-rooms, .available-rooms {
+  text-align: center;
+  font-weight: 500;
+}
+
+.available-rooms {
+  color: #28a745;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.status-available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-reserved {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-checked_in {
+  background: #cce5ff;
+  color: #004085;
+}
+
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-data-content {
+  color: #6c757d;
+}
+
+.no-data-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+
+
+/* Button Styles */
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #545b62;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 2% auto;
+  padding: 0;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2F1B14;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #000;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  padding: 0 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #2F1B14;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 0 0 8px 8px;
+}
+
+@media (max-width: 768px) {
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 10% auto;
+  }
+}
+</style>
+
+<script>
+// Modal functions
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// Room Type functions
+function openAddRoomTypeModal() {
+  document.getElementById('addRoomTypeForm').reset();
+  openModal('addRoomTypeModal');
+}
+
+function openEditRoomTypeModal(id, name, price, description, totalRooms, isActive) {
+  document.getElementById('editRoomTypeId').value = id;
+  document.getElementById('editRoomTypeName').value = name;
+  document.getElementById('editRoomTypePrice').value = price;
+  document.getElementById('editRoomTypeDescription').value = description;
+  document.getElementById('editRoomTypeTotalRooms').value = totalRooms;
+  document.getElementById('editRoomTypeActive').checked = isActive;
+  openModal('editRoomTypeModal');
+}
+
+function openAddRoomModal(roomTypeId, roomTypeName) {
+  document.getElementById('addRoomTypeId').value = roomTypeId;
+  document.getElementById('addRoomForm').reset();
+  document.getElementById('addRoomTypeId').value = roomTypeId;
+  openModal('addRoomModal');
+}
+
+function openEditRoomModal(id, name, isActive) {
+  document.getElementById('editRoomId').value = id;
+  document.getElementById('editRoomName').value = name;
+  document.getElementById('editRoomActive').checked = isActive === true || isActive === 'true';
+  openModal('editRoomModal');
+}
+
+// Delete functions
+function deleteRoomType(id) {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "This will delete the room type and all associated rooms. This action cannot be undone!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch(`/staff/rooms/delete-room-type/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire('Deleted!', 'Room type has been deleted.', 'success').then(() => {
+            location.reload();
+          });
+        } else {
+          Swal.fire('Error!', data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Error deleting room type', 'error');
+      });
+    }
+  });
+}
+
+function deleteRoom(id) {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "This will delete the room. This action cannot be undone!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!',
+    cancelButtonText: 'Cancel'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch(`/staff/rooms/delete-room/${id}/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          Swal.fire('Deleted!', 'Room has been deleted.', 'success').then(() => {
+            location.reload();
+          });
+        } else {
+          Swal.fire('Error!', data.message, 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Error deleting room', 'error');
+      });
+    }
+  });
+}
+
+// Form submissions
+document.getElementById('addRoomTypeForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch('/staff/rooms/add-room-type/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire('Success!', 'Room type added successfully.', 'success').then(() => {
+        location.reload();
+      });
+    } else {
+      Swal.fire('Error!', data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Error!', 'Error adding room type', 'error');
+  });
+});
+
+document.getElementById('editRoomTypeForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch('/staff/rooms/edit-room-type/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire('Success!', 'Room type updated successfully.', 'success').then(() => {
+        location.reload();
+      });
+    } else {
+      Swal.fire('Error!', data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Error!', 'Error updating room type', 'error');
+  });
+});
+
+document.getElementById('addRoomForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch('/staff/rooms/add-room/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire('Success!', 'Room added successfully.', 'success').then(() => {
+        location.reload();
+      });
+    } else {
+      Swal.fire('Error!', data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Error!', 'Error adding room', 'error');
+  });
+});
+
+document.getElementById('editRoomForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch('/staff/rooms/edit-room/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire('Success!', 'Room updated successfully.', 'success').then(() => {
+        location.reload();
+      });
+    } else {
+      Swal.fire('Error!', data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Error!', 'Error updating room', 'error');
+  });
+});
+
+// Search functionality for room types
+document.getElementById('searchRoomTypes').addEventListener('input', function() {
+  const searchTerm = this.value.toLowerCase();
+  const tableRows = document.querySelectorAll('#roomTypesTableBody tr');
+  
+  tableRows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    if (text.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+});
+
+// Search functionality for individual rooms (dynamic for each room type)
+document.addEventListener('DOMContentLoaded', function() {
+  // Format all price amounts with commas
+  const priceAmounts = document.querySelectorAll('.price-amount');
+  priceAmounts.forEach(element => {
+    const number = parseFloat(element.textContent);
+    if (!isNaN(number)) {
+      element.textContent = number.toLocaleString('en-US');
+    }
+  });
+  
+  // Add search functionality for each room type's individual rooms
+  {% for room_type in room_types %}
+  const searchInput{{ room_type.id }} = document.getElementById('searchRooms{{ room_type.id }}');
+  if (searchInput{{ room_type.id }}) {
+    searchInput{{ room_type.id }}.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const tableRows = document.querySelectorAll('#roomsTableBody{{ room_type.id }} tr');
+      
+      tableRows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  }
+  {% endfor %}
+});
+</script>
+{% endblock %}

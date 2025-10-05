@@ -1,0 +1,505 @@
+{% extends 'kilistaff/staffbase.html' %}
+{% load static %}
+
+{% block title %}Staff Dashboard - Kili Haven Lodge{% endblock %}
+
+{% block extra_css %}
+<style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+    
+    .sidebar ul li {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 20px;
+  cursor: pointer;
+  transition: 0.3s;
+  border-top-left-radius: 30px;
+  border-bottom-left-radius: 30px;
+  margin: 5px 0;   /* remove right margin */
+  white-space: nowrap;
+}
+
+.sidebar ul li.active {
+  background: #fff;
+  color: #1e90ff;
+  font-weight: bold;
+  margin-right: 0; /* stick to content */
+  border-top-right-radius: 0;   /* remove right round */
+  border-bottom-right-radius: 0;
+}
+
+
+    body {
+      display: flex;
+      min-height: 100vh;
+      background: #f5f6fa;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background:rgb(11, 24, 4);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      position: fixed;
+      height: 100%;
+      transition: width 0.3s, left 0.3s;
+      overflow: hidden;
+      z-index: 1000;
+      left: 0;
+    }
+
+    .sidebar.collapsed {
+      width: 80px;
+    }
+
+    .sidebar.hidden {
+      left: -250px; /* for mobile close */
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 0 20px;
+      margin-bottom: 30px;
+    }
+
+    .brand-text {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand i {
+      font-size: 24px;
+    }
+
+    .brand span {
+      font-size: 18px;
+      font-weight: bold;
+      white-space: nowrap;
+      transition: opacity 0.3s;
+    }
+
+    .brand-logo {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      transition: opacity 0.3s;
+    }
+
+    .sidebar.collapsed .brand span {
+      opacity: 0;
+    }
+
+    .sidebar.collapsed .brand-logo {
+      opacity: 0;
+    }
+
+    .sidebar ul {
+      list-style: none;
+    }
+
+    .sidebar ul li {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 20px;
+      cursor: pointer;
+      transition: 0.3s;
+      border-top-left-radius: 30px;
+      border-bottom-left-radius: 30px;
+      margin: 5px 10px;
+      white-space: nowrap;
+    }
+
+    .sidebar ul li i {
+      font-size: 18px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .sidebar ul li:hover {
+      background: #2a5a1a;
+    }
+
+    .sidebar ul li.active {
+      background: #fff;
+      color:rgb(11, 24, 4);
+      font-weight: bold;
+    }
+
+    .sidebar ul li.active:hover {
+      background: #fff;
+      color:rgb(10, 22, 4);
+    }
+
+    .sidebar.collapsed ul li span {
+      display: none;
+    }
+
+    /* Main content */
+    .main {
+      margin-left: 250px;
+      padding: 20px;
+      flex: 1;
+      transition: margin-left 0.3s;
+      width: 100%;
+    }
+
+    .main.collapsed {
+      margin-left: 80px;
+    }
+
+    .main.full {
+      margin-left: 0; /* when sidebar hidden on mobile */
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .topbar input {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+    }
+
+    .menu-toggle {
+      font-size: 22px;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    /* User dropdown */
+    .user-menu {
+      position: relative;
+    }
+
+    .user-icon {
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .dropdown {
+      position: absolute;
+      right: 0;
+      top: 40px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      display: none;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 1001;
+    }
+
+    .dropdown.active {
+      display: flex;
+    }
+
+    .dropdown a {
+      padding: 10px 15px;
+      text-decoration: none;
+      color: #333;
+      transition: background 0.2s;
+    }
+
+    .dropdown a:hover {
+      background: #f0f0f0;
+    }
+
+    /* Cards */
+    .cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      flex: 1;
+      min-width: 200px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #4CAF50, #45a049);
+    }
+
+    .card.rooms::before {
+      background: linear-gradient(90deg, #2196F3, #1976D2);
+    }
+
+    .card.reservations::before {
+      background: linear-gradient(90deg, #FF9800, #F57C00);
+    }
+
+    .card.checkins::before {
+      background: linear-gradient(90deg, #4CAF50, #45a049);
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      opacity: 0.8;
+    }
+
+    .card.rooms .card-icon {
+      color: #2196F3;
+    }
+
+    .card.reservations .card-icon {
+      color: #FF9800;
+    }
+
+    .card.checkins .card-icon {
+      color: #4CAF50;
+    }
+
+    .card h3 {
+      font-size: 2.2rem;
+      font-weight: bold;
+      margin: 10px 0;
+      color: #333;
+    }
+
+    .card p {
+      color: #666;
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin: 0;
+    }
+
+    .content {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .table-container, .customers {
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      flex: 1;
+      min-width: 300px;
+      overflow-x: auto;
+    }
+
+    .table-container h3, .customers h3 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.3rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .table-container h3::before {
+      content: '📊';
+      font-size: 1.2rem;
+    }
+
+    .customers h3::before {
+      content: '📈';
+      font-size: 1.2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.95rem;
+    }
+
+    tr:hover {
+      background-color: #f8f9ff;
+    }
+
+    .status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .delivered { 
+      background: linear-gradient(135deg, #4CAF50, #45a049);
+    }
+    .pending { 
+      background: linear-gradient(135deg, #FF9800, #F57C00);
+    }
+    .inprogress { 
+      background: linear-gradient(135deg, #2196F3, #1976D2);
+    }
+    .return { 
+      background: linear-gradient(135deg, #f44336, #d32f2f);
+    }
+
+    .customers ul {
+      list-style: none;
+    }
+
+    .customers ul li {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        left: -250px; /* hide sidebar on mobile */
+      }
+
+      .sidebar.show {
+        left: 0;
+      }
+
+      .main {
+        margin-left: 0 !important;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="cards">
+      <div class="card rooms">
+        <i class="fa-solid fa-bed card-icon"></i>
+        <h3>{{ total_rooms }}</h3>
+        <p>Total Room Types</p>
+      </div>
+      <div class="card reservations">
+        <i class="fa-solid fa-calendar-check card-icon"></i>
+        <h3>{{ total_reservations }}</h3>
+        <p>Total Reservations</p>
+      </div>
+      <div class="card checkins">
+        <i class="fa-solid fa-user-check card-icon"></i>
+        <h3>{{ total_checkins }}</h3>
+        <p>Total Check-ins</p>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="table-container">
+        <h3>Yearly Statistics ({{ current_year }})</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Count</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Reservations</td>
+              <td>{{ yearly_reservations }}</td>
+              <td><span class="status delivered">Active</span></td>
+            </tr>
+            <tr>
+              <td>Total Check-ins</td>
+              <td>{{ yearly_checkins }}</td>
+              <td><span class="status delivered">Completed</span></td>
+            </tr>
+            <tr>
+              <td>Pending Reservations</td>
+              <td>{{ yearly_pending }}</td>
+              <td><span class="status pending">Pending</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="customers">
+        <h3>Monthly Statistics ({{ current_month }})</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>This Month Reservations</td>
+              <td>{{ monthly_reservations }}</td>
+            </tr>
+            <tr>
+              <td>This Month Check-ins</td>
+              <td>{{ monthly_checkins }}</td>
+            </tr>
+            <tr>
+              <td>Currently Checked-in</td>
+              <td>{{ current_checked_in }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
