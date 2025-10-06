@@ -316,16 +316,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
         <Card className="border-0 shadow-none">
           <CardContent className="p-0">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Security Status */}
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center">
-                  <Shield className="h-4 w-4 text-blue-600 mr-2" />
-                  <span className="text-sm text-blue-800 font-medium">Secure Booking</span>
-                </div>
-                <div className="text-xs text-blue-600">
-                  {remainingAttempts} attempts remaining
-                </div>
-              </div>
+            
 
               {/* Rate Limiting Warning */}
               {isRateLimited && lockoutTime && (

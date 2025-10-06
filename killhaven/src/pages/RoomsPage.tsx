@@ -121,8 +121,7 @@ const RoomsPage = () => {
                 Our Rooms
               </h1>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Choose from our comfortable accommodations at the foot of Mount Kilimanjaro, designed for both business and leisure travelers. 
-                All rates include breakfast and taxes.
+                Choose from our comfortable accommodations at the foot of Mount Kilimanjaro, designed for both business and leisure travelers.
               </p>
             </div>
 
