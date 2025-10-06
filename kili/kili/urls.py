@@ -21,10 +21,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 from django.views.generic import RedirectView
+from django.contrib.sitemaps.views import sitemap
+from .sitemaps import HomePageSitemap, RoomsPageSitemap, GalleryPageSitemap, ContactPageSitemap
 import os
 
-def home_view(request):
-    """Serve React frontend homepage"""
+def serve_react_app(request):
+    """Serve React frontend for any route"""
     # Path to your React build index.html in killhaven/dist
     react_build_path = os.path.join(settings.BASE_DIR.parent, 'killhaven', 'dist', 'index.html')
     
@@ -49,13 +51,43 @@ def home_view(request):
         </html>
         """, content_type='text/html')
 
+def home_view(request):
+    """Serve React frontend homepage"""
+    return serve_react_app(request)
+
+def rooms_view(request):
+    """Serve React frontend rooms page"""
+    return serve_react_app(request)
+
+def gallery_view(request):
+    """Serve React frontend gallery page"""
+    return serve_react_app(request)
+
+def contact_view(request):
+    """Serve React frontend contact page"""
+    return serve_react_app(request)
+
+# Sitemap configuration
+sitemaps = {
+    'home': HomePageSitemap,
+    'rooms': RoomsPageSitemap,
+    'gallery': GalleryPageSitemap,
+    'contact': ContactPageSitemap,
+}
+
 urlpatterns = [
     path('', home_view, name='home'),  # Serve React frontend
+    path('rooms/', rooms_view, name='rooms'),  # Serve React frontend for rooms
+    path('gallery/', gallery_view, name='gallery'),  # Serve React frontend for gallery
+    path('contact/', contact_view, name='contact'),  # Serve React frontend for contact
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),  # API routes
     path('auth/', include('auths.urls')),  # Authentication routes
     path('manager/', include('kilimanager.urls')),  # Manager routes
     path('staff/', include('kilistaff.urls')),  # Staff routes
+    
+    # Sitemap URL
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     
     # Favicon and icon URLs
     path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
