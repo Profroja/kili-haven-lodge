@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import BookingModal from "./BookingModal";
 import lodgeExterior from "@/assets/pic1.jpg";
 import r5 from "@/assets/r5.jpg";
-import kiliHavenVideo from "@/assets/kili-haven-video.mp4";
+import r3 from "@/assets/r3.jpg";
 import logoKili from "@/assets/logo-kili-min.png";
 
 const slides = [
@@ -19,9 +19,9 @@ const slides = [
     alt: "Kili Haven Lodge room interior"
   },
   {
-    type: "video",
-    src: kiliHavenVideo,
-    alt: "Kill Haven Lodge mountain wilderness video"
+    type: "image",
+    src: r3,
+    alt: "Kili Haven Lodge room interior"
   }
 ];
 
@@ -32,7 +32,7 @@ const HeroSection = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, currentSlide === 2 ? 10000 : 5000); // Video slide (index 2) shows for 10 seconds, others for 5 seconds
+    }, 5000); // All slides show for 5 seconds
 
     return () => clearInterval(timer);
   }, [currentSlide]);
@@ -51,24 +51,11 @@ const HeroSection = () => {
             index === currentSlide ? "opacity-100" : "opacity-0"
           }`}
         >
-          {slide.type === "image" ? (
-            <img
-              src={slide.src}
-              alt={slide.alt}
-              className="w-full h-full object-cover object-top sm:object-center"
-            />
-          ) : (
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-full object-cover object-top sm:object-center"
-            >
-              <source src={slide.src} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          )}
+          <img
+            src={slide.src}
+            alt={slide.alt}
+            className="w-full h-full object-cover object-top sm:object-center"
+          />
         </div>
       ))}
 

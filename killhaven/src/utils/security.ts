@@ -32,11 +32,18 @@ export const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email) && email.length <= 254;
 };
 
-// Phone validation (international format)
+// Phone validation (flexible mobile format)
 export const isValidPhone = (phone: string): boolean => {
-  const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
+  if (!phone || phone.trim().length === 0) return false;
+  
+  // Remove all spaces, dashes, and parentheses
   const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-  return phoneRegex.test(cleanPhone) && cleanPhone.length >= 10 && cleanPhone.length <= 16;
+  
+  // Check if it's a valid mobile number format
+  // Accepts: 0736373, +25576859949, 076464748, +25576463737, etc.
+  const mobileRegex = /^(\+?255)?[0-9]{9,10}$/;
+  
+  return mobileRegex.test(cleanPhone) && cleanPhone.length >= 9 && cleanPhone.length <= 15;
 };
 
 // Password strength validation
@@ -202,7 +209,7 @@ export const validateBookingForm = (formData: any): {
 
   // Phone validation
   if (!formData.phone || !isValidPhone(formData.phone)) {
-    errors.phone = 'Please enter a valid phone number';
+    errors.phone = 'Please enter a valid mobile number (e.g., 0766123456 or +255766123456)';
   }
 
   // Date validation
@@ -225,9 +232,8 @@ export const validateBookingForm = (formData: any): {
   }
 
   // Guests validation
-  const guests = parseInt(formData.guests);
-  if (!formData.guests || isNaN(guests) || guests < 1 || guests > 10) {
-    errors.guests = 'Please enter a valid number of guests (1-10)';
+  if (!formData.guests || (formData.guests !== '1' && formData.guests !== '2')) {
+    errors.guests = 'Please select number of guests (1 or 2)';
   }
 
   // Origin validation

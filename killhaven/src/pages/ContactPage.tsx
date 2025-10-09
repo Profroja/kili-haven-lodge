@@ -4,40 +4,9 @@ import FloatingSocialButtons from "@/components/FloatingSocialButtons";
 import ReserveButton from "@/components/ReserveButton";
 import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
+import { Phone, Mail, MapPin, Clock } from "lucide-react";
 
 const ContactPage = () => {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: ""
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Message Sent!",
-      description: "We'll get back to you within 24 hours.",
-    });
-    setFormData({
-      name: "",
-      email: "",
-      subject: "",
-      message: ""
-    });
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
 
   return (
     <div className="min-h-screen">
@@ -98,76 +67,8 @@ const ContactPage = () => {
               </Card>
             </div>
 
-            {/* Contact Form */}
-            <div className="grid lg:grid-cols-2 gap-12">
-              <Card className="shadow-elegant">
-                <CardContent className="p-8">
-                  <div className="flex items-center mb-6">
-                    <MessageCircle className="w-6 h-6 text-accent mr-3" />
-                    <h2 className="text-2xl font-bold text-primary">Send us a Message</h2>
-                  </div>
-                  
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => handleInputChange("name", e.target.value)}
-                          required
-                          className="border-border focus:ring-accent"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange("email", e.target.value)}
-                          required
-                          className="border-border focus:ring-accent"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">Subject</Label>
-                      <Input
-                        id="subject"
-                        value={formData.subject}
-                        onChange={(e) => handleInputChange("subject", e.target.value)}
-                        required
-                        className="border-border focus:ring-accent"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="message">Message</Label>
-                      <Textarea
-                        id="message"
-                        value={formData.message}
-                        onChange={(e) => handleInputChange("message", e.target.value)}
-                        placeholder="Tell us how we can help you..."
-                        rows={6}
-                        required
-                        className="border-border focus:ring-accent"
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full bg-accent text-accent-foreground hover:bg-accent-light transition-colors duration-300"
-                    >
-                      Send Message
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              {/* Map Section */}
-              <div className="space-y-6">
+            {/* Map Section */}
+            <div className="max-w-4xl mx-auto">
                 <Card className="shadow-elegant">
                   <CardContent className="p-0">
                     <div className="rounded-lg overflow-hidden">
@@ -185,26 +86,25 @@ const ContactPage = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-elegant">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-semibold text-primary mb-4">Quick Contact</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <Phone className="w-5 h-5 text-accent mr-3" />
-                        <span className="text-muted-foreground">+255-676-626-193</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Mail className="w-5 h-5 text-accent mr-3" />
-                        <span className="text-muted-foreground">kilihavenlodge@gmail.com</span>
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="w-5 h-5 text-accent mr-3" />
-                        <span className="text-muted-foreground">Kariwa Chini Street, Moshi - Kilimanjaro</span>
-                      </div>
+              <Card className="shadow-elegant mt-6">
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold text-primary mb-4">Quick Contact</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <Phone className="w-5 h-5 text-accent mr-3" />
+                      <span className="text-muted-foreground">+255-676-626-193</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <div className="flex items-center">
+                      <Mail className="w-5 h-5 text-accent mr-3" />
+                      <span className="text-muted-foreground">kilihavenlodge@gmail.com</span>
+                    </div>
+                    <div className="flex items-center">
+                      <MapPin className="w-5 h-5 text-accent mr-3" />
+                      <span className="text-muted-foreground">Kariwa Chini Street, Moshi - Kilimanjaro</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>

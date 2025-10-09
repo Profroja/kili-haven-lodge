@@ -438,17 +438,19 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="guests" className="text-primary font-medium">Number of Guests</Label>
-                  <Input
-                    id="guests"
-                    type="number"
-                    min="1"
-                    value={formData.guests}
-                    onChange={(e) => handleInputChange("guests", e.target.value)}
-                    placeholder="Enter number of guests"
-                    className="border-forest focus:border-accent"
-                    required
-                  />
+                  <Label className="text-primary font-medium">Number of Guests</Label>
+                  <Select 
+                    value={formData.guests} 
+                    onValueChange={(value) => handleInputChange("guests", value)}
+                  >
+                    <SelectTrigger className="border-forest focus:border-accent">
+                      <SelectValue placeholder="Select number of guests" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Guest</SelectItem>
+                      <SelectItem value="2">2 Guests</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
