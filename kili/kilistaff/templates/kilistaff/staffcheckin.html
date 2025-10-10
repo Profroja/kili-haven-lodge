@@ -980,7 +980,13 @@ function initializeStep(step) {
                 data.rooms.forEach(room => {
                   const option = document.createElement('option');
                   option.value = room.id;
-                  option.textContent = room.room_name;
+                  
+                  // For existing reservations, show room type information
+                  if (checkinData.existing_reservation_id) {
+                    option.textContent = `${room.room_name} - ${data.room_type}`;
+                  } else {
+                    option.textContent = room.room_name;
+                  }
                   
                   // Mark assigned room for existing reservations
                   if (checkinData.existing_reservation_id && checkinData.room_id == room.id) {
