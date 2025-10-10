@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import BookingModal from "./BookingModal";
 import lodgeExterior from "@/assets/pic1.jpg";
-import r5 from "@/assets/r5.jpg";
-import r3 from "@/assets/r3.jpg";
+import r5 from "@/assets/r3.jpg";
+import r3 from "@/assets/v8.jpg";
 import logoKili from "@/assets/logo-kili-min.png";
 
 const slides = [

@@ -45,6 +45,7 @@ def home(request):
             guests = booking_details.get('number_of_guests', '1')
             id_document = booking_details.get('id_document', 'national_id')
             origin = booking_details.get('origin', '')
+            purpose_of_stay = booking_details.get('purpose_of_stay', 'leisure')
             special_requests = booking_details.get('special_requests', 'None')
             
             # Parse room type name (remove price info)
@@ -103,7 +104,7 @@ def home(request):
                 check_in_date=check_in_date,
                 check_out_date=check_out_date,
                 number_of_guests=int(guests) if guests.isdigit() else 1,
-                purpose_of_visit='leisure',  # Default
+                purpose_of_visit=purpose_of_stay,
                 special_requests=special_requests if special_requests != 'None' else '',
                 status='pending'
             )

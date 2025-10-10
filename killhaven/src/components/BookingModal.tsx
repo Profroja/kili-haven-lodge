@@ -45,6 +45,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
     idDocument: "",
     idDocumentOther: "",
     origin: "",
+    purpose: "",
     specialRequests: ""
   });
 
@@ -129,6 +130,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
         idDocument: sanitizeInput(formData.idDocument),
         idDocumentOther: sanitizeInput(formData.idDocumentOther),
         origin: sanitizeInput(formData.origin),
+        purpose: sanitizeInput(formData.purpose),
         specialRequests: sanitizeInput(formData.specialRequests)
       };
 
@@ -147,6 +149,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
         Check-out: ${sanitizedData.checkOut}
         Room Type: ${roomTypeName} ${roomTypePrice}
         Number of Guests: ${sanitizedData.guests}
+        Purpose of Stay: ${sanitizedData.purpose}
         ID Document: ${sanitizedData.idDocument}${sanitizedData.idDocumentOther ? ` (${sanitizedData.idDocumentOther})` : ''}
         Origin: ${sanitizedData.origin}
         Special Requests: ${sanitizedData.specialRequests || 'None'}`,
@@ -264,6 +267,7 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
         idDocument: "",
         idDocumentOther: "",
         origin: "",
+        purpose: "",
         specialRequests: ""
       });
 
@@ -495,6 +499,20 @@ const BookingModal = ({ isOpen, onClose }: BookingModalProps) => {
                   />
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label className="text-primary font-medium">Purpose of Stay</Label>
+                <Select value={formData.purpose} onValueChange={(value) => handleInputChange("purpose", value)}>
+                  <SelectTrigger className="border-forest focus:border-accent">
+                    <SelectValue placeholder="Select purpose of stay" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="leisure">Leisure</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="special-requests" className="text-primary font-medium">Special Requests</Label>
