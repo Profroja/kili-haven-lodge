@@ -34,7 +34,7 @@ const AboutSection = () => {
           <div className="relative">
             <img 
               src={lodgeExterior} 
-              alt="Kill Haven Lodge exterior at golden hour"
+              alt="Kili Haven Lodge exterior at golden hour"
               className="rounded-lg shadow-elegant w-full"
             />
           </div>

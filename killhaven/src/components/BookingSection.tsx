@@ -50,7 +50,7 @@ const BookingSection = () => {
             Reserve Your Stay
           </h2>
           <p className="text-xl text-muted-foreground slide-up">
-            Begin your wilderness adventure at Kill Haven Lodge
+            Begin your wilderness adventure at Kili Haven Lodge
           </p>
         </div>
 

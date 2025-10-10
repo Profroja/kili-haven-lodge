@@ -11,7 +11,7 @@ const slides = [
   {
     type: "image",
     src: lodgeExterior,
-    alt: "Kill Haven Lodge exterior at golden hour"
+    alt: "Kili Haven Lodge exterior at golden hour"
   },
   {
     type: "image", 
