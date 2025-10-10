@@ -468,21 +468,21 @@ def staff_process_checkin(request):
                     'message': f'{field.replace("_", " ").title()} is required'
                 }, status=400)
         
-        # Handle ID photo upload if provided
-        id_photo = None
+        # Handle ID document upload if provided
+        id_document = None
         if data.get('id_passport_photo'):
             try:
-                # Decode base64 image
-                image_data = data['id_passport_photo']
-                if image_data.startswith('data:image'):
-                    format, imgstr = image_data.split(';base64,')
+                # Handle base64 encoded files (images, PDFs, documents)
+                file_data = data['id_passport_photo']
+                if file_data.startswith('data:'):
+                    format, file_str = file_data.split(';base64,')
                     ext = format.split('/')[-1]
-                    image_data = base64.b64decode(imgstr)
-                    id_photo = ContentFile(image_data, name=f'id_photo_{customer_data["id_passport_number"]}.{ext}')
+                    file_content = base64.b64decode(file_str)
+                    id_document = ContentFile(file_content, name=f'id_document_{customer_data["id_passport_number"]}.{ext}')
             except Exception as e:
                 return JsonResponse({
                     'status': 'error',
-                    'message': f'Error processing ID photo: {str(e)}'
+                    'message': f'Error processing ID document: {str(e)}'
                 }, status=400)
         
         # Check if customer already exists
@@ -495,9 +495,14 @@ def staff_process_checkin(request):
             # Update existing customer
             for key, value in customer_data.items():
                 setattr(customer, key, value)
-            if id_photo:
-                customer.id_passport_photo = id_photo
+            if id_document:
+                customer.id_passport_photo = id_document
             customer.save()
+        else:
+            # For new customers, set the document if provided
+            if id_document:
+                customer.id_passport_photo = id_document
+                customer.save()
         
         # Get the room
         try:
@@ -718,16 +723,19 @@ def staff_checkin_existing_reservation(request, reservation_id):
         if 'other_id_name' in data:
             customer.other_id_name = data['other_id_name']
         
-        # Handle ID photo upload if provided
+        # Handle ID document upload if provided
         if 'id_passport_photo' in data and data['id_passport_photo']:
             try:
-                # Decode base64 image
-                format, imgstr = data['id_passport_photo'].split(';base64,')
-                ext = format.split('/')[-1]
-                file_data = ContentFile(base64.b64decode(imgstr), name=f'id_photo_{customer.id}.{ext}')
-                customer.id_passport_photo = file_data
+                # Handle base64 encoded files (images, PDFs, documents)
+                file_data = data['id_passport_photo']
+                if file_data.startswith('data:'):
+                    format, file_str = file_data.split(';base64,')
+                    ext = format.split('/')[-1]
+                    file_content = base64.b64decode(file_str)
+                    document_file = ContentFile(file_content, name=f'id_document_{customer.id}.{ext}')
+                    customer.id_passport_photo = document_file
             except Exception as e:
-                print(f"Error processing ID photo: {e}")
+                print(f"Error processing ID document: {e}")
         
         customer.save()
         

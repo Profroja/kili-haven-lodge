@@ -783,9 +783,9 @@ function getStepHTML(step) {
           </div>
           
           <div class="form-group">
-            <label for="modal_id_passport_photo">ID Photo</label>
-            <input type="file" id="modal_id_passport_photo" name="id_passport_photo" accept="image/*">
-            <small>Upload ID or Passport photo (optional)</small>
+            <label for="modal_id_passport_photo">ID Document</label>
+            <input type="file" id="modal_id_passport_photo" name="id_passport_photo" accept="image/*,.pdf,.doc,.docx">
+            <small>Upload ID, Passport photo, or document (optional) - Images, PDF, DOC, DOCX allowed</small>
           </div>
         </div>
         
@@ -1147,14 +1147,15 @@ function saveStepData(step) {
       }
     });
     
-    // Handle file upload
+    // Handle file upload (images, PDFs, documents)
     const fileInput = document.getElementById('modal_id_passport_photo');
     if (fileInput && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
       const reader = new FileReader();
       reader.onload = function(e) {
         checkinData.id_passport_photo = e.target.result;
       };
-      reader.readAsDataURL(fileInput.files[0]);
+      reader.readAsDataURL(file);
     }
   }
   
@@ -1450,10 +1451,23 @@ function viewReservation(bookingId) {
                   <h4 style="margin: 0 0 20px; color: #2F1B14; font-size: 20px; text-align: center; font-weight: 700;">🆔 ID Document</h4>
                   <div style="width: 320px; height: 200px; border: 3px solid #ddd; border-radius: 15px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                     ${reservation.customer.id_passport_photo ? 
-                      `<img src="${reservation.customer.id_passport_photo}" alt="ID Document" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; cursor: pointer;" onclick="openImageModal('${reservation.customer.id_passport_photo}')" title="Click to view full size">` :
+                      (reservation.customer.id_passport_photo.toLowerCase().includes('.pdf') ? 
+                        `<div style="text-align: center; color: #dc3545; font-size: 16px; cursor: pointer;" onclick="openDocumentModal('${reservation.customer.id_passport_photo}')" title="Click to view PDF">
+                          <i class="fa-solid fa-file-pdf" style="font-size: 48px; margin-bottom: 12px;"></i><br>
+                          PDF Document<br>
+                          <small style="font-size: 12px;">Click to view</small>
+                        </div>` :
+                        reservation.customer.id_passport_photo.toLowerCase().includes('.doc') ? 
+                        `<div style="text-align: center; color: #007bff; font-size: 16px; cursor: pointer;" onclick="openDocumentModal('${reservation.customer.id_passport_photo}')" title="Click to view document">
+                          <i class="fa-solid fa-file-word" style="font-size: 48px; margin-bottom: 12px;"></i><br>
+                          Word Document<br>
+                          <small style="font-size: 12px;">Click to view</small>
+                        </div>` :
+                        `<img src="${reservation.customer.id_passport_photo}" alt="ID Document" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; cursor: pointer;" onclick="openImageModal('${reservation.customer.id_passport_photo}')" title="Click to view full size">`
+                      ) :
                       `<div style="text-align: center; color: #6c757d; font-size: 16px;">
-                        <i class="fa-solid fa-image" style="font-size: 48px; margin-bottom: 12px; opacity: 0.5;"></i><br>
-                        No ID image uploaded
+                        <i class="fa-solid fa-file" style="font-size: 48px; margin-bottom: 12px; opacity: 0.5;"></i><br>
+                        No ID document uploaded
                       </div>`
                     }
                   </div>
@@ -1542,6 +1556,54 @@ function openImageModal(imageSrc) {
     },
     zIndex: 99999
     });
+}
+
+// Open document modal for PDF and Word documents
+function openDocumentModal(documentSrc) {
+  const isPDF = documentSrc.toLowerCase().includes('.pdf');
+  const isWord = documentSrc.toLowerCase().includes('.doc');
+  
+  let documentType = 'Document';
+  let icon = 'fa-file';
+  let color = '#6c757d';
+  
+  if (isPDF) {
+    documentType = 'PDF Document';
+    icon = 'fa-file-pdf';
+    color = '#dc3545';
+  } else if (isWord) {
+    documentType = 'Word Document';
+    icon = 'fa-file-word';
+    color = '#007bff';
+  }
+  
+  Swal.fire({
+    title: 'ID Document',
+    html: `
+      <div style="text-align: center;">
+        <div style="margin-bottom: 20px;">
+          <i class="fa-solid ${icon}" style="font-size: 64px; color: ${color}; margin-bottom: 16px;"></i>
+          <h3 style="color: ${color}; margin: 0;">${documentType}</h3>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; color: #6c757d;">This document cannot be previewed in the browser.</p>
+          <p style="margin: 10px 0 0 0; color: #6c757d;">Please download and open with the appropriate application.</p>
+        </div>
+        <a href="${documentSrc}" target="_blank" style="display: inline-block; background: ${color}; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; margin-top: 16px;">
+          <i class="fa-solid fa-download" style="margin-right: 8px;"></i>
+          Download Document
+        </a>
+      </div>
+    `,
+    width: '500px',
+    showConfirmButton: true,
+    confirmButtonText: 'Close',
+    confirmButtonColor: '#2F1B14',
+    customClass: {
+      popup: 'swal-high-z-index'
+    },
+    zIndex: 99999
+  });
 }
 
 // Checkout reservation
