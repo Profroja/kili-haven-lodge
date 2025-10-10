@@ -647,6 +647,7 @@ function loadReservationDetails() {
           check_in_date: reservation.check_in_date,
           check_out_date: reservation.check_out_date,
           room_type: reservation.room_type.id,
+          room_type_name: reservation.room_type.name,
           room_id: reservation.room ? reservation.room.id : '',
           room_name: reservation.room ? reservation.room.room_name : '',
           number_of_guests: reservation.number_of_guests,
@@ -811,7 +812,7 @@ function getStepHTML(step) {
         
         <div class="modal-step active">
           <h4 style="margin-bottom: 15px; color: #2F1B14;">Room Selection & Check-in Details</h4>
-          ${checkinData.existing_reservation_id && checkinData.room_name ? `<div style="background: #e8f5e8; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #4caf50;"><strong style="color: #2e7d32;">🏨 Assigned Room</strong><br><small style="color: #666;">This guest has been assigned to: <strong>${checkinData.room_name}</strong></small></div>` : ''}
+          ${checkinData.existing_reservation_id && checkinData.room_name ? `<div style="background: #e8f5e8; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #4caf50;"><strong style="color: #2e7d32;">🏨 Assigned Room</strong><br><small style="color: #666;">This guest has been assigned to: <strong>${checkinData.room_name} - ${checkinData.room_type_name || 'Room Type'}</strong></small></div>` : ''}
           
           <div class="form-row">
             <div class="form-group">
